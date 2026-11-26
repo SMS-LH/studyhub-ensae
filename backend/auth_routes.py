@@ -112,7 +112,14 @@ async def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
                 )
             if r.status_code >= 400:
                 logger.error("Brevo API error %s: %s", r.status_code, r.text)
-                raise HTTPException(502, "Impossible d'envoyer l'email via Brevo. Vérifie l'expéditeur ou la clé API.")
+                try:
+                    brevo_msg = r.json().get("message", "")
+                except Exception:
+                    brevo_msg = ""
+                raise HTTPException(
+                    502,
+                    f"Impossible d'envoyer l'email via Brevo ({r.status_code}{': ' + brevo_msg if brevo_msg else ''}).",
+                )
             return
         except HTTPException:
             raise
