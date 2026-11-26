@@ -417,4 +417,4 @@ python test_password_reset.py
 
 ## 📄 Licence
 
-MIT — Projet académique ENSAE, 2024-2025.
+MIT — Projet Club Informatique ENSAE
