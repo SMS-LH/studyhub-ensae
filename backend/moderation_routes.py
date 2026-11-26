@@ -160,6 +160,27 @@ async def update_user_role(
     return {"id": user_id, "role": body.role}
 
 
+@router.delete("/moderation/users/{user_id}")
+async def delete_user(user_id: str, user: dict = Depends(get_current_user)):
+    if user.get("role") not in ("moderator", "admin"):
+        raise HTTPException(403, "Seul un modérateur BDE peut supprimer un utilisateur")
+    if user_id == user["id"]:
+        raise HTTPException(400, "Tu ne peux pas supprimer ton propre compte")
+    target = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "role": 1})
+    if not target:
+        raise HTTPException(404, "Utilisateur introuvable")
+    if target.get("role") == "admin":
+        raise HTTPException(403, "Impossible de supprimer un administrateur système")
+
+    await db.users.delete_one({"id": user_id})
+    await db.workspaces.update_many({}, {"$pull": {"members": {"id": user_id}}})
+    await db.notifications.delete_many({"user_id": user_id})
+    await db.password_reset_tokens.delete_many({"user_id": user_id})
+    await db.exams.delete_many({"user_id": user_id})
+    await db.study_plans.delete_many({"user_id": user_id})
+    return {"ok": True, "id": user_id}
+
+
 @router.get("/moderation/stats")
 async def school_stats(user: dict = Depends(get_current_user)):
     require_moderator(user)

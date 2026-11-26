@@ -114,6 +114,8 @@ function ReportsTab() {
 
 /* ─── Users Tab ───────────────────────────────────────────── */
 function UsersTab() {
+  const { user: currentUser } = useAuth();
+  const isGlobalMod = ["moderator", "admin"].includes(currentUser?.role);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -159,6 +161,22 @@ function UsersTab() {
     }
   };
 
+  const deleteUser = async (u) => {
+    if (
+      !window.confirm(
+        `Supprimer définitivement le compte de ${u.name} (${u.email}) ?`,
+      )
+    )
+      return;
+    try {
+      await api.delete(`/moderation/users/${u.id}`);
+      toast.success("Utilisateur supprimé");
+      load();
+    } catch (e) {
+      toast.error(formatError(e));
+    }
+  };
+
   if (loading)
     return (
       <div className="py-16 grid place-items-center">
@@ -178,7 +196,15 @@ function UsersTab() {
           </h3>
           <div className="space-y-2">
             {pending.map((u) => (
-              <UserRow key={u.id} u={u} onVerify={verify} onSetRole={setUserRole} />
+              <UserRow
+                key={u.id}
+                u={u}
+                currentUser={currentUser}
+                isGlobalMod={isGlobalMod}
+                onVerify={verify}
+                onSetRole={setUserRole}
+                onDelete={deleteUser}
+              />
             ))}
           </div>
         </div>
@@ -190,7 +216,15 @@ function UsersTab() {
           </h3>
           <div className="space-y-2">
             {others.map((u) => (
-              <UserRow key={u.id} u={u} onVerify={verify} onSetRole={setUserRole} />
+              <UserRow
+                key={u.id}
+                u={u}
+                currentUser={currentUser}
+                isGlobalMod={isGlobalMod}
+                onVerify={verify}
+                onSetRole={setUserRole}
+                onDelete={deleteUser}
+              />
             ))}
           </div>
         </div>
@@ -199,7 +233,7 @@ function UsersTab() {
   );
 }
 
-function UserRow({ u, onVerify, onSetRole }) {
+function UserRow({ u, currentUser, isGlobalMod, onVerify, onSetRole, onDelete }) {
   const isMod = u.role === "moderator" || u.role === "admin";
   const isClassAdmin = u.role === "class_admin";
   const clsLabel = u.class_name || (u.filiere ? `${u.filiere} ${u.annee}` : "");
@@ -275,6 +309,17 @@ function UserRow({ u, onVerify, onSetRole }) {
             >
               {isMod ? "Retirer modérateur" : "Promouvoir modérateur"}
             </Button>
+            {isGlobalMod && u.id !== currentUser?.id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                title="Supprimer cet utilisateur"
+                className="rounded-full h-8 px-3 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                onClick={() => onDelete(u)}
+              >
+                <Trash2 size={12} className="mr-1" /> Supprimer
+              </Button>
+            )}
           </>
         )}
       </div>
