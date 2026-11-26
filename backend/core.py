@@ -497,7 +497,10 @@ def extract_text(data: bytes, filename: str) -> str:
 def _gemini_client():
     if not GEMINI_API_KEY or GEMINI_API_KEY == "your_free_gemini_api_key_here":
         return None
-    return genai.Client(api_key=GEMINI_API_KEY)
+    return genai.Client(
+        api_key=GEMINI_API_KEY,
+        http_options=types.HttpOptions(api_version="v1beta"),
+    )
 
 
 def parse_json(raw: str):
@@ -676,12 +679,12 @@ async def ask_json(prompt: str, system: str):
     last_exc: Exception | None = None
     for model_name in _gemini_models_to_try():
         try:
+            full_prompt = f"{sys}\n\n---\n\n{prompt}"
             resp = await asyncio.to_thread(
                 gc.models.generate_content,
                 model=model_name,
-                contents=prompt,
+                contents=full_prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=sys,
                     response_mime_type="application/json",
                 ),
             )
@@ -725,10 +728,10 @@ async def stream_llm(prompt: str, system: str):
         for model_name in _gemini_models_to_try():
             emitted = False
             try:
+                full_prompt = f"{system}\n\n---\n\n{prompt}" if system else prompt
                 for chunk in gc.models.generate_content_stream(
                     model=model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(system_instruction=system),
+                    contents=full_prompt,
                 ):
                     if getattr(chunk, "text", None):
                         emitted = True
