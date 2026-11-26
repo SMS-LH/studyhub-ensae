@@ -634,6 +634,37 @@ def _demo_json_fallback(prompt: str, system: str):
     return {}
 
 
+def _gemini_models_to_try() -> list[str]:
+    candidates = [GEMINI_MODEL, "gemini-2.5-flash-lite", "gemini-2.0-flash"]
+    seen: list[str] = []
+    for m in candidates:
+        if m and m not in seen:
+            seen.append(m)
+    return seen
+
+
+def _is_retryable_gemini_err(exc: Exception) -> bool:
+    msg = str(exc).upper()
+    return any(
+        k in msg
+        for k in ("404", "NOT_FOUND", "503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "OVERLOADED")
+    )
+
+
+def friendly_gemini_error(exc: Exception) -> str:
+    msg = str(exc)
+    upper = msg.upper()
+    if "API_KEY_INVALID" in upper or "API KEY NOT VALID" in upper:
+        return "Clé GEMINI_API_KEY invalide sur Render. Vérifie-la dans Environment."
+    if "PERMISSION_DENIED" in upper or "403" in upper:
+        return "Accès refusé par l'API Gemini (clé restreinte ou API désactivée)."
+    if "RESOURCE_EXHAUSTED" in upper or "429" in upper or "QUOTA" in upper:
+        return "Quota gratuit Gemini atteint temporairement. Réessaie dans quelques instants."
+    if "NOT_FOUND" in upper or "404" in upper:
+        return f"Modèle Gemini introuvable ({GEMINI_MODEL})."
+    return f"Le service IA Gemini est indisponible ({type(exc).__name__}: {msg[:120]})."
+
+
 async def ask_json(prompt: str, system: str):
     sys = (
         system
@@ -642,25 +673,31 @@ async def ask_json(prompt: str, system: str):
     gc = _gemini_client()
     if gc is None:
         return _demo_json_fallback(prompt, sys)
-    try:
-        resp = await asyncio.to_thread(
-            gc.models.generate_content,
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=sys,
-                response_mime_type="application/json",
-            ),
-        )
-        return parse_json(resp.text or "{}")
-    except (json.JSONDecodeError, ValueError) as exc:
-        logger.error("LLM JSON parse failed: %s", exc)
-        raise HTTPException(502, "L'IA a renvoyé une réponse illisible, réessaie.")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("LLM call failed: %s", exc)
-        raise HTTPException(502, "Le service IA Gemini est indisponible pour le moment.")
+    last_exc: Exception | None = None
+    for model_name in _gemini_models_to_try():
+        try:
+            resp = await asyncio.to_thread(
+                gc.models.generate_content,
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=sys,
+                    response_mime_type="application/json",
+                ),
+            )
+            return parse_json(resp.text or "{}")
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.error("LLM JSON parse failed (%s): %s", model_name, exc)
+            raise HTTPException(502, "L'IA a renvoyé une réponse illisible, réessaie.")
+        except HTTPException:
+            raise
+        except Exception as exc:
+            last_exc = exc
+            logger.warning("LLM call failed on %s: %s", model_name, exc)
+            if not _is_retryable_gemini_err(exc):
+                break
+    logger.error("LLM call failed after fallbacks: %s", last_exc)
+    raise HTTPException(502, friendly_gemini_error(last_exc or RuntimeError("unknown")))
 
 
 async def stream_llm(prompt: str, system: str):
@@ -684,17 +721,26 @@ async def stream_llm(prompt: str, system: str):
     loop = asyncio.get_running_loop()
 
     def _run_stream():
-        try:
-            for chunk in gc.models.generate_content_stream(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(system_instruction=system),
-            ):
-                if getattr(chunk, "text", None):
-                    loop.call_soon_threadsafe(queue.put_nowait, ("delta", chunk.text))
-            loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
-        except Exception as exc:
-            loop.call_soon_threadsafe(queue.put_nowait, ("err", exc))
+        last_exc: Exception | None = None
+        for model_name in _gemini_models_to_try():
+            emitted = False
+            try:
+                for chunk in gc.models.generate_content_stream(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(system_instruction=system),
+                ):
+                    if getattr(chunk, "text", None):
+                        emitted = True
+                        loop.call_soon_threadsafe(queue.put_nowait, ("delta", chunk.text))
+                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+                return
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("LLM stream failed on %s: %s", model_name, exc)
+                if emitted or not _is_retryable_gemini_err(exc):
+                    break
+        loop.call_soon_threadsafe(queue.put_nowait, ("err", last_exc or RuntimeError("unknown")))
 
     task = asyncio.create_task(asyncio.to_thread(_run_stream))
     try:

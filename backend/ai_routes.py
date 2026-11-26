@@ -5,7 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from core import ask_json, db, get_current_user, logger, new_id, now_iso, stream_llm
+from core import (
+    ask_json,
+    db,
+    friendly_gemini_error,
+    get_current_user,
+    logger,
+    new_id,
+    now_iso,
+    stream_llm,
+)
 
 router = APIRouter(prefix="/api/ai")
 MAX_CHARS = 80000
@@ -56,7 +65,7 @@ async def summary(body: SourceIn, user: dict = Depends(get_current_user)):
                 yield f"data: {json.dumps({'delta': chunk})}\n\n"
         except Exception as exc:
             logger.error("summary stream failed: %s", exc)
-            yield f"data: {json.dumps({'error': 'Le service IA est indisponible pour le moment.'})}\n\n"
+            yield f"data: {json.dumps({'error': friendly_gemini_error(exc)})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
 
     return StreamingResponse(
