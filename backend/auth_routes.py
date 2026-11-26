@@ -90,8 +90,10 @@ async def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
     )
 
     smtp_user = os.environ.get("SMTP_USER", "").strip()
-    smtp_from = os.environ.get("SMTP_FROM", "").strip() or smtp_user or "no-reply@studyhub-ensae.fr"
+    smtp_from = os.environ.get("SMTP_FROM", "").strip().strip("\"'") or smtp_user or "no-reply@studyhub-ensae.fr"
     from_name, from_email = parseaddr(smtp_from)
+    if not from_email and "@" in smtp_from and " " not in smtp_from:
+        from_email = smtp_from
     if not from_email:
         from_name, from_email = "StudyHub ENSAE", "no-reply@studyhub-ensae.fr"
 
