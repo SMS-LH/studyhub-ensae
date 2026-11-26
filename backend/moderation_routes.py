@@ -166,18 +166,22 @@ async def delete_user(user_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(403, "Seul un modérateur BDE peut supprimer un utilisateur")
     if user_id == user["id"]:
         raise HTTPException(400, "Tu ne peux pas supprimer ton propre compte")
-    target = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "role": 1})
+    target = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "role": 1, "email": 1})
     if not target:
         raise HTTPException(404, "Utilisateur introuvable")
     if target.get("role") == "admin":
         raise HTTPException(403, "Impossible de supprimer un administrateur système")
 
+    target_email = target.get("email", "")
     await db.users.delete_one({"id": user_id})
     await db.workspaces.update_many({}, {"$pull": {"members": {"id": user_id}}})
     await db.notifications.delete_many({"user_id": user_id})
     await db.password_reset_tokens.delete_many({"user_id": user_id})
     await db.exams.delete_many({"user_id": user_id})
     await db.study_plans.delete_many({"user_id": user_id})
+    # Free the email so the address can be re-used to register a new account
+    if target_email:
+        await db.login_attempts.delete_many({"identifier": target_email})
     return {"ok": True, "id": user_id}
 
 

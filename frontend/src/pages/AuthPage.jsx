@@ -92,7 +92,20 @@ export default function AuthPage() {
       }
       if (demoCreds) await login(demoCreds[0], demoCreds[1]);
       else if (mode === "login") await login(form.email, form.password);
-      else await register(form);
+      else {
+        const result = await register(form);
+        // Pending accounts are not logged in; show info message and redirect to login
+        if (result?.user?.verification_status === "pending") {
+          toast.info(
+            "Compte créé ! Ton inscription est en attente de validation par un modérateur BDE. Tu pourras te connecter dès qu'elle sera approuvée.",
+            { duration: 8000 },
+          );
+          setMode("login");
+          return;
+        }
+        // Auto-login for verified accounts (ENSAE email or invite code)
+        await login(form.email, form.password);
+      }
       toast.success("Bienvenue sur StudyHub ENSAE !");
     } catch (err) {
       toast.error(formatError(err));

@@ -261,6 +261,8 @@ async def register(body: RegisterIn, response: Response):
             {"id": promo_ws["id"]},
             {"$addToSet": {"members": {"id": user["id"], "name": user["name"]}}},
         )
+    if not is_verified:
+        return {"user": public_user(user), "token": None}
     return _issue(response, user)
 
 
@@ -290,6 +292,18 @@ async def login(body: LoginIn, request: Request, response: Response):
         verify_password, body.password, user["password_hash"]
     ):
         raise HTTPException(401, "Email ou mot de passe incorrect")
+    # Block access for accounts not yet verified or rejected
+    if not user.get("is_verified", True):
+        if user.get("verification_status") == "rejected":
+            raise HTTPException(
+                403,
+                "Ton inscription a été refusée par la modération.",
+            )
+        raise HTTPException(
+            403,
+            "Ton compte est en attente de validation par un modérateur BDE. "
+            "Tu pourras te connecter dès que ton accès sera approuvé.",
+        )
     await db.login_attempts.delete_one({"identifier": email})
     return _issue(response, user)
 

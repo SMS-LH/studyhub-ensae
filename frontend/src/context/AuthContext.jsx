@@ -23,11 +23,13 @@ export const AuthProvider = ({ children }) => {
       });
   }, []);
 
-  const authenticate = useCallback(async (path, body) => {
+  const authenticate = useCallback(async (path, body, { storeToken = true } = {}) => {
     const { data } = await api.post(path, body);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
+    if (storeToken) {
+      setToken(data.token);
+      setUser(data.user);
+    }
+    return data;
   }, []);
 
   const logout = useCallback(async () => {
@@ -43,7 +45,8 @@ export const AuthProvider = ({ children }) => {
         setUser,
         login: (email, password) =>
           authenticate("/auth/login", { email, password }),
-        register: (payload) => authenticate("/auth/register", payload),
+        register: (payload) =>
+          authenticate("/auth/register", payload, { storeToken: false }),
         logout,
       }}
     >

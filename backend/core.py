@@ -232,6 +232,8 @@ async def user_from_token(token: str) -> dict:
     )
     if not user:
         raise HTTPException(401, "Utilisateur introuvable")
+    if not user.get("is_verified", True):
+        raise HTTPException(403, "Compte en attente de validation par un modérateur BDE.")
     return user
 
 
