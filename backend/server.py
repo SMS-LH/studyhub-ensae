@@ -165,6 +165,23 @@ for r in (
 async def root():
     from core import GEMINI_API_KEY, GEMINI_MODEL, _cloudinary_creds
 
+    brevo_api = bool(os.environ.get("BREVO_API_KEY", "").strip())
+    resend_api = bool(os.environ.get("RESEND_API_KEY", "").strip())
+    smtp_ok = bool(
+        os.environ.get("SMTP_HOST", "").strip()
+        and os.environ.get("SMTP_USER", "").strip()
+        and os.environ.get("SMTP_PASSWORD", "").strip()
+    )
+    email_provider = (
+        "brevo_api"
+        if brevo_api
+        else "resend_api"
+        if resend_api
+        else "smtp"
+        if smtp_ok
+        else None
+    )
+
     return {
         "message": "StudyHub ENSAE API",
         "status": "ok",
@@ -173,11 +190,8 @@ async def root():
         ),
         "ai_model": GEMINI_MODEL,
         "cloudinary_configured": _cloudinary_creds() is not None,
-        "smtp_configured": bool(
-            os.environ.get("SMTP_HOST", "").strip()
-            and os.environ.get("SMTP_USER", "").strip()
-            and os.environ.get("SMTP_PASSWORD", "").strip()
-        ),
+        "smtp_configured": smtp_ok or brevo_api or resend_api,
+        "email_provider": email_provider,
     }
 
 

@@ -6,7 +6,9 @@ import secrets
 import smtplib
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from email.utils import parseaddr
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from pymongo import ReturnDocument
@@ -65,25 +67,8 @@ def _hash_reset_token(token: str) -> str:
 
 
 async def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
-    smtp_host = os.environ.get("SMTP_HOST", "").strip()
-    smtp_port = int(os.environ.get("SMTP_PORT", "587").strip() or "587")
-    smtp_user = os.environ.get("SMTP_USER", "").strip()
-    smtp_pass = os.environ.get("SMTP_PASSWORD", "").strip()
-    smtp_from = os.environ.get("SMTP_FROM", "").strip() or smtp_user or "no-reply@studyhub-ensae.fr"
-
-    if not smtp_host or not smtp_user or not smtp_pass:
-        logger.warning(
-            "SMTP non configuré — lien de réinitialisation pour %s : %s",
-            to_email,
-            reset_url,
-        )
-        return
-
-    msg = EmailMessage()
-    msg["Subject"] = "StudyHub ENSAE — Réinitialisation de ton mot de passe"
-    msg["From"] = smtp_from
-    msg["To"] = to_email
-    msg.set_content(
+    subject = "StudyHub ENSAE — Réinitialisation de ton mot de passe"
+    text_body = (
         f"Bonjour {name},\n\n"
         f"Tu as demandé la réinitialisation de ton mot de passe sur StudyHub ENSAE.\n"
         f"Clique sur le lien ci-dessous (valable 1 heure) :\n\n"
@@ -91,29 +76,101 @@ async def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
         f"Si tu n'es pas à l'origine de cette demande, ignore simplement cet email.\n\n"
         f"— L'équipe StudyHub ENSAE"
     )
-    msg.add_alternative(
-        f"""<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;color:#0f172a">
-          <h2 style="color:#1e3a8a;margin-bottom:8px">StudyHub ENSAE</h2>
-          <p>Bonjour <strong>{name}</strong>,</p>
-          <p>Tu as demandé à réinitialiser ton mot de passe. Ce lien est valable <strong>1 heure</strong> :</p>
-          <p style="margin:24px 0">
-            <a href="{reset_url}" style="background:#1e3a8a;color:#ffffff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block">
-              Réinitialiser mon mot de passe
-            </a>
-          </p>
-          <p style="font-size:12px;color:#64748b">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br/>{reset_url}</p>
-          <p style="font-size:12px;color:#64748b">Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
-        </div>""",
-        subtype="html",
+    html_body = (
+        f'<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;color:#0f172a">'
+        f'<h2 style="color:#1e3a8a;margin-bottom:8px">StudyHub ENSAE</h2>'
+        f"<p>Bonjour <strong>{name}</strong>,</p>"
+        f"<p>Tu as demandé à réinitialiser ton mot de passe. Ce lien est valable <strong>1 heure</strong> :</p>"
+        f'<p style="margin:24px 0">'
+        f'<a href="{reset_url}" style="background:#1e3a8a;color:#ffffff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;display:inline-block">'
+        f"Réinitialiser mon mot de passe</a></p>"
+        f'<p style="font-size:12px;color:#64748b">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br/>{reset_url}</p>'
+        f'<p style="font-size:12px;color:#64748b">Si tu n\'es pas à l\'origine de cette demande, ignore cet email.</p>'
+        f"</div>"
     )
+
+    smtp_user = os.environ.get("SMTP_USER", "").strip()
+    smtp_from = os.environ.get("SMTP_FROM", "").strip() or smtp_user or "no-reply@studyhub-ensae.fr"
+    from_name, from_email = parseaddr(smtp_from)
+    if not from_email:
+        from_name, from_email = "StudyHub ENSAE", "no-reply@studyhub-ensae.fr"
+
+    brevo_key = os.environ.get("BREVO_API_KEY", "").strip()
+    if brevo_key:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={"api-key": brevo_key, "Content-Type": "application/json"},
+                    json={
+                        "sender": {"name": from_name or "StudyHub ENSAE", "email": from_email},
+                        "to": [{"email": to_email, "name": name}],
+                        "subject": subject,
+                        "htmlContent": html_body,
+                        "textContent": text_body,
+                    },
+                )
+            if r.status_code >= 400:
+                logger.error("Brevo API error %s: %s", r.status_code, r.text)
+                raise HTTPException(502, "Impossible d'envoyer l'email via Brevo. Vérifie l'expéditeur ou la clé API.")
+            return
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Brevo API request failed: %s", exc)
+            raise HTTPException(502, "Impossible d'envoyer l'email pour le moment. Réessaie plus tard.")
+
+    resend_key = os.environ.get("RESEND_API_KEY", "").strip()
+    if resend_key:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                    json={
+                        "from": smtp_from,
+                        "to": [to_email],
+                        "subject": subject,
+                        "html": html_body,
+                        "text": text_body,
+                    },
+                )
+            if r.status_code >= 400:
+                logger.error("Resend API error %s: %s", r.status_code, r.text)
+                raise HTTPException(502, "Impossible d'envoyer l'email via Resend.")
+            return
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Resend API request failed: %s", exc)
+            raise HTTPException(502, "Impossible d'envoyer l'email pour le moment. Réessaie plus tard.")
+
+    smtp_host = os.environ.get("SMTP_HOST", "").strip()
+    smtp_port = int(os.environ.get("SMTP_PORT", "587").strip() or "587")
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "").strip()
+
+    if not smtp_host or not smtp_user or not smtp_pass:
+        logger.warning(
+            "Email non configuré — lien de réinitialisation pour %s : %s",
+            to_email,
+            reset_url,
+        )
+        return
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = smtp_from
+    msg["To"] = to_email
+    msg.set_content(text_body)
+    msg.add_alternative(html_body, subtype="html")
 
     def _smtp_send() -> None:
         if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=8) as server:
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
         else:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
                 server.starttls()
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
@@ -122,7 +179,10 @@ async def _send_reset_email(to_email: str, name: str, reset_url: str) -> None:
         await asyncio.to_thread(_smtp_send)
     except Exception as exc:
         logger.error("Erreur envoi email reset à %s : %s", to_email, exc)
-        raise HTTPException(502, "Impossible d'envoyer l'email pour le moment. Réessaie plus tard.")
+        raise HTTPException(
+            502,
+            "Envoi SMTP bloqué ou indisponible sur le serveur. Configure BREVO_API_KEY (HTTPS) sur Render.",
+        )
 
 
 def _issue(response: Response, user: dict) -> dict:
