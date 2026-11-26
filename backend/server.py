@@ -163,7 +163,22 @@ for r in (
 
 @app.get("/api/")
 async def root():
-    return {"message": "StudyHub ENSAE API", "status": "ok"}
+    from core import GEMINI_API_KEY, GEMINI_MODEL, _cloudinary_creds
+
+    return {
+        "message": "StudyHub ENSAE API",
+        "status": "ok",
+        "ai_configured": bool(
+            GEMINI_API_KEY and GEMINI_API_KEY != "your_free_gemini_api_key_here"
+        ),
+        "ai_model": GEMINI_MODEL,
+        "cloudinary_configured": _cloudinary_creds() is not None,
+        "smtp_configured": bool(
+            os.environ.get("SMTP_HOST", "").strip()
+            and os.environ.get("SMTP_USER", "").strip()
+            and os.environ.get("SMTP_PASSWORD", "").strip()
+        ),
+    }
 
 
 cors_origins = [
