@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+export const API = `${BACKEND_URL}/api`;
 const TOKEN_KEY = "studyhub_token";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);

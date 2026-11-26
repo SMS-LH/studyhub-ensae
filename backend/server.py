@@ -162,15 +162,19 @@ async def root():
 
 
 cors_origins = [
-    o.strip()
+    o.strip().rstrip("/")
     for o in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
     if o.strip()
 ]
+frontend_url = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+if frontend_url and frontend_url not in cors_origins:
+    cors_origins.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=False,
     allow_origins=cors_origins,
+    allow_origin_regex=r"https://[a-zA-Z0-9-]+\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
