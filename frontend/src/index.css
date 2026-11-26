@@ -1,0 +1,132 @@
+@import url("https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@500,700,800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 23% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 224 64% 33%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 42%;
+    --accent: 38 92% 95%;
+    --accent-foreground: 26 90% 30%;
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 89%;
+    --input: 214 32% 86%;
+    --ring: 224 64% 33%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      linear-gradient(rgba(30, 58, 138, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30, 58, 138, 0.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: #fde68a;
+    color: #1e3a8a;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-amber-700;
+  }
+  .surface {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-[0_1px_0_rgba(15,23,42,0.04)];
+  }
+  .fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .flip-card {
+    perspective: 1400px;
+  }
+  .flip-inner {
+    transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .flip-card.flipped .flip-inner {
+    transform: rotateY(180deg);
+  }
+  .flip-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .flip-back {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.markdown h1 {
+  @apply text-2xl font-bold mt-2 mb-4 text-slate-900;
+}
+.markdown h2 {
+  @apply text-lg font-bold mt-6 mb-2 text-primary border-b border-slate-200 pb-1;
+}
+.markdown h3 {
+  @apply text-base font-semibold mt-4 mb-1 text-slate-800;
+}
+.markdown p {
+  @apply my-2 leading-relaxed text-slate-700;
+}
+.markdown ul {
+  @apply list-disc pl-5 my-2 space-y-1 text-slate-700;
+}
+.markdown ol {
+  @apply list-decimal pl-5 my-2 space-y-1 text-slate-700;
+}
+.markdown strong {
+  @apply text-slate-900 font-semibold;
+}
+.markdown code {
+  @apply font-mono text-[0.85em] bg-slate-100 px-1 py-0.5 rounded;
+}
+.markdown table {
+  @apply w-full text-sm my-3 border-collapse;
+}
+.markdown th,
+.markdown td {
+  @apply border border-slate-200 px-2 py-1 text-left;
+}
+.markdown blockquote {
+  @apply border-l-4 border-amber-400 bg-amber-50 px-3 py-2 my-3 rounded-r;
+}
+.markdown em {
+  @apply italic;
+}

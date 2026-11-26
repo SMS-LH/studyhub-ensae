@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: studyhub-ensae-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: USE_MOCK_DB
+        value: "false"
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: studyhub_ensae
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STORAGE_DIR
+        value: /tmp/storage
+      - key: FRONTEND_URL
+        sync: false

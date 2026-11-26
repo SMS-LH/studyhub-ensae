@@ -1,0 +1,217 @@
+{
+  "project_name": "StudyHub",
+  "project_tagline": "Le super-app collaboratif de la réussite étudiante",
+  "language": "fr",
+  "app_type": "saas_app / student_collaboration_dashboard",
+  "persona_and_tone": {
+    "archetype": "Organic & Academic Modernity meets Swiss Utility",
+    "emotional_goal": "Stimuler la confiance, l'entraide collective et la sérénité face aux examens sans tomber dans l'aspect froid ou corporatif des LMS traditionnels",
+    "vibe": "Chaleureux, studieux, vif, ultra-structuré avec un twist papier/kraft moderne et touches indigo profond + ambre doré",
+    "theme_mode": "Light mode par défaut (idéal pour étudier de jour), avec mode sombre soigné (ardoise nocturne)",
+    "anti_ai_slop_note": "Bannir les dégradés violets génériques (#7351B7 interdit) et le bleu SaaS fade. Utiliser des aplats riches, des micro-textures de papier/grille, des badges précis et une typographie éditoriale claire."
+  },
+  "typography": {
+    "font_families": {
+      "headings": "Cabinet Grotesk, Plus Jakarta Sans, Outfit, sans-serif",
+      "body": "Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+      "code_mono": "JetBrains Mono, Menlo, monospace"
+    },
+    "google_fonts_import": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap",
+    "hierarchy_rules": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100",
+      "h3": "text-lg sm:text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-200",
+      "h4": "text-base sm:text-lg font-medium text-slate-800 dark:text-slate-200",
+      "body": "text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-300",
+      "small_label": "text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+    }
+  },
+  "colors": {
+    "palette_name": "Sorbonne Modern - Deep Indigo & Warm Amber & Chalk Slate",
+    "tokens": {
+      "primary": {
+        "hex": "#1E3A8A",
+        "tailwind": "blue-900",
+        "description": "Bleu universitaire profond pour l'autorité académique et la concentration"
+      },
+      "primary_hover": {
+        "hex": "#1D4ED8",
+        "tailwind": "blue-700"
+      },
+      "primary_accent": {
+        "hex": "#2563EB",
+        "tailwind": "blue-600"
+      },
+      "secondary_accent": {
+        "hex": "#D97706",
+        "tailwind": "amber-600",
+        "description": "Ambre doré pour les révisions, badges d'excellence, récompenses d'entraide et alertes douces"
+      },
+      "emerald_success": {
+        "hex": "#059669",
+        "tailwind": "emerald-600",
+        "description": "Validation par les pairs, quiz réussis, upvotes"
+      },
+      "rose_danger": {
+        "hex": "#E11D48",
+        "tailwind": "rose-600",
+        "description": "Signalement d'erreurs, dates butoirs imminentes, downvotes"
+      },
+      "surface_light": {
+        "background": "#F8FAFC",
+        "card": "#FFFFFF",
+        "card_subtle": "#F1F5F9",
+        "border": "#E2E8F0"
+      },
+      "surface_dark": {
+        "background": "#0F172A",
+        "card": "#1E293B",
+        "card_subtle": "#0F172A",
+        "border": "#334155"
+      }
+    },
+    "contrast_verification": "Texte slate-900 sur slate-50 offre un ratio > 12:1. Badges amber et emerald avec fonds opacifiés (bg-amber-500/10 text-amber-700) respectent largement APCA et WCAG AA."
+  },
+  "layout_and_grids": {
+    "navigation_pattern": "Top Bar flottante cristal (backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 z-50) avec Logo StudyHub, sélecteur d'université 'Univ. Paris Cité / Panthéon-Sorbonne', onglets principaux (Bibliothèque, Assistant IA, Espaces de Groupe, Mon Profil/Stats), barre de recherche globale sémantique, bouton 'Déposer une fiche' et profil utilisateur.",
+    "sub_navigation": "Pills horizontaux avec compteurs réactifs pour basculer facilement entre les modules (ex: dans Assistant IA -> Résumé, Quiz & Flashcards, Correcteur & APA, Rétroplanning).",
+    "bento_strategy": "Dans chaque vue (Library, AI Lab, Workspaces), utilisation de Bento asymétrique : vue principale de travail (col-span-8) et volet contextuel (col-span-4) avec métriques, activité récente ou aperçu direct."
+  },
+  "key_components_and_features": {
+    "module_1_bibliotheque": {
+      "french_title": "Bibliothèque Collaborative des Fiches",
+      "description": "Partage multi-format pour les étudiants d'une même université, 100% gratuit et validé par les pairs.",
+      "features": [
+        "Upload multi-format : PDF, Word (.docx), PowerPoint (.pptx), Enregistrements vidéo de cours (.mp4), Code source (.py, .js, .cpp).",
+        "Moteur de recherche sémantique par concepts (ex: 'Théorème de Bayes en actuariat', 'Arrêt Blanco droit administratif', 'Cycle de Krebs biochimie').",
+        "Filtres par Filière / Faculté (Droit, Médecine, Informatique, Économie, Lettres, Sciences) et Niveau (L1, L2, L3, M1, M2).",
+        "Système de Peer Review complet : Upvotes / Downvotes, score de confiance par la promo, badge 'Certifié Promo 2026'.",
+        "Commentaires collaboratifs pour signaler une erreur de cours avec horodatage ou citation de page.",
+        "Versioning V1 -> V2 : Historique de révision ('V2 publiée par Marc remplace V1 avec corrections en page 4').",
+        "Lecteur intégré dans le navigateur (Document Viewer) avec mode plein écran, zoom, annotations et transcription des fiches."
+      ]
+    },
+    "module_2_assistant_ia": {
+      "french_title": "Assistant IA Académique (StudyAI)",
+      "description": "Suite d'outils intelligents spécifiquement calibrés pour la méthodologie universitaire française.",
+      "tools": [
+        {
+          "id": "resumer",
+          "name": "Synthèse & Fiche de Révision",
+          "action": "Transforme 30 pages de cours magistral en fiche synthétique bullet-points avec notions clés, définitions et mnémotechniques."
+        },
+        {
+          "id": "quiz_flashcards",
+          "name": "Générateur QCM & Flashcards",
+          "action": "Génération instantanée de QCM chronométrés et de paquets de flashcards interactives recto/verso (avec auto-évaluation de mémorisation SRS)."
+        },
+        {
+          "id": "correcteur_apa",
+          "name": "Correcteur & Reformulateur Académique + APA",
+          "action": "Correction stylistique pour mémoire/rapport de stage, détection du ton académique, et générateur instantané de citations conformes aux normes APA 7ème édition."
+        },
+        {
+          "id": "planificateur",
+          "name": "Planificateur Rétroplanning d'Examens",
+          "action": "Saisie de la date des partiels (ex: 15 mai) -> calcul automatique du calendrier de révision intensif jour par jour avec temps de repos."
+        }
+      ]
+    },
+    "module_3_espaces_de_groupe": {
+      "french_title": "Espaces de Travail & Projets de Groupe",
+      "description": "Coordination des projets collectifs, exposé ou mémoire partagé.",
+      "features": [
+        "Workspace dédié par matière ou projet d'équipe.",
+        "Tableau Kanban interactif avec 3 colonnes ('À faire', 'En cours', 'Terminé') avec drag/drop ou boutons de déplacement rapide, assignation aux membres et dates d'échéance.",
+        "Suivi de contribution transparent (Journal d'activité d'entraide : 'Sarah a rédigé 340 mots', 'Paul a ajouté 3 fiches sources', 'Thomas a validé l'intro').",
+        "Document partagé de notes en direct (Shared Group Notes) avec sauvegarde automatique et zone de discussion d'équipe."
+      ]
+    },
+    "module_4_auth_and_user": {
+      "french_title": "Authentification & Profil Étudiant",
+      "description": "Inscription et connexion immédiate (email universitaire ou démo en 1-clic pour tester instantanément), sélection de l'université partenaire."
+    }
+  },
+  "image_urls": {
+    "library_hero": {
+      "url": "https://images.pexels.com/photos/8199762/pexels-photo-8199762.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Étudiants en pleine session de travail dans la bibliothèque universitaire",
+      "usage": "Bannière d'accueil de la bibliothèque collaborative et header du lecteur de documents"
+    },
+    "group_collaboration": {
+      "url": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxzdHVkZW50cyUyMGNvbGxhYm9yYXRpbmclMjBncm91cCUyMHByb2plY3R8ZW58MHx8fHwxNzk1NjE5NDIzfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Groupe d'étudiants travaillant ensemble sur un projet commun avec ordinateurs",
+      "usage": "Illustration du module Espaces de Groupe et projets collaboratifs"
+    },
+    "student_ambassador": {
+      "url": "https://images.unsplash.com/photo-1765650113773-0752556dcea0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxzdHVkZW50JTIwcG9ydHJhaXQlMjBzbWlsaW5nJTIwY2FtcHVzfGVufDB8fHx8MTc5NTYxOTQyM3ww&ixlib=rb-4.1.0&q=85",
+      "alt": "Étudiante souriante avec son carnet sur le campus",
+      "usage": "Avatar témoignage et bannière d'inscription gratuite pour les promos"
+    },
+    "library_shelves": {
+      "url": "https://images.unsplash.com/photo-1642130935796-1409d7e075dd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHw0fHx1bml2ZXJzaXR5JTIwc3R1ZGVudHMlMjBzdHVkeSUyMGxpYnJhcnklMjBjYW1wdXN8ZW58MHx8fHwxNzk1NjE5NDIzfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Rayons de bibliothèque universitaire remplis d'ouvrages académiques",
+      "usage": "Fond subtil pour la recherche sémantique"
+    }
+  },
+  "data_testid_conventions": {
+    "header": {
+      "logo": "data-testid=\"studyhub-logo\"",
+      "nav_library": "data-testid=\"nav-link-library\"",
+      "nav_ai": "data-testid=\"nav-link-ai-assistant\"",
+      "nav_workspaces": "data-testid=\"nav-link-workspaces\"",
+      "theme_toggle": "data-testid=\"theme-toggle-button\"",
+      "user_menu": "data-testid=\"user-profile-menu-button\""
+    },
+    "library": {
+      "search_input": "data-testid=\"library-search-input\"",
+      "faculty_filter": "data-testid=\"library-faculty-filter\"",
+      "format_filter": "data-testid=\"library-format-filter\"",
+      "upload_button": "data-testid=\"library-upload-trigger-button\"",
+      "upload_modal": "data-testid=\"library-upload-modal\"",
+      "upload_submit": "data-testid=\"library-upload-submit-button\"",
+      "document_card_prefix": "data-testid=\"doc-card-",
+      "document_viewer": "data-testid=\"document-viewer-container\"",
+      "vote_up_button": "data-testid=\"doc-vote-up-button\"",
+      "vote_down_button": "data-testid=\"doc-vote-down-button\"",
+      "report_error_button": "data-testid=\"doc-report-error-button\"",
+      "version_selector": "data-testid=\"doc-version-select\""
+    },
+    "ai_assistant": {
+      "tab_resumer": "data-testid=\"ai-tab-summary\"",
+      "tab_quiz": "data-testid=\"ai-tab-quiz\"",
+      "tab_flashcards": "data-testid=\"ai-tab-flashcards\"",
+      "tab_correcteur": "data-testid=\"ai-tab-corrector\"",
+      "tab_apa": "data-testid=\"ai-tab-apa\"",
+      "tab_planner": "data-testid=\"ai-tab-planner\"",
+      "generate_button": "data-testid=\"ai-generate-button\"",
+      "result_container": "data-testid=\"ai-result-content\""
+    },
+    "workspace": {
+      "create_board_button": "data-testid=\"workspace-create-button\"",
+      "kanban_column_todo": "data-testid=\"kanban-col-todo\"",
+      "kanban_column_doing": "data-testid=\"kanban-col-in-progress\"",
+      "kanban_column_done": "data-testid=\"kanban-col-done\"",
+      "add_task_button": "data-testid=\"kanban-add-task-button\"",
+      "activity_feed": "data-testid=\"workspace-activity-feed\"",
+      "notes_editor": "data-testid=\"workspace-shared-notes-textarea\""
+    },
+    "auth": {
+      "login_tab": "data-testid=\"auth-login-tab\"",
+      "register_tab": "data-testid=\"auth-register-tab\"",
+      "email_input": "data-testid=\"auth-email-input\"",
+      "password_input": "data-testid=\"auth-password-input\"",
+      "submit_button": "data-testid=\"auth-submit-button\"",
+      "demo_login_button": "data-testid=\"auth-demo-login-button\""
+    }
+  },
+  "instructions_to_main_agent": [
+    "L'application doit impérativement avoir TOUTE son interface rédigée en français soigné et naturel (vocabulaire universitaire : fiches de révision, QCM, fiches mémos, partiels, soutenance, TD, promo).",
+    "Fournir des données de démonstration pré-chargées très riches et réalistes (ex: Fiche Droit Constitutionnel V2, TD Algèbre Linéaire en Python, Cours Biophysique Médecine L2, Synthèse Histoire contemporaine).",
+    "Garantir un mock interactif fluide pour l'IA (génération simulée réaliste avec indicateur de réflexion IA, puis résultat formaté avec boutons de copie et d'export).",
+    "Dans la bibliothèque, permettre de cliquer sur une fiche pour ouvrir un lecteur de document élégant avec onglets : Contenu du cours / Fiche, Commentaires & Erreurs signalées, Historique des versions (V1 -> V2).",
+    "Le Kanban dans les Espaces de Groupe doit permettre de déplacer des tâches facilement (glisser ou boutons d'état), d'ajouter des tâches et d'afficher le journal de contribution en temps réel.",
+    "Proposer un sélecteur d'Université d'affiliation (ex: Sorbonne Université, Université Paris Cité, Université de Lyon, Aix-Marseille Université) dans le header.",
+    "Intégrer Sonner pour tous les retours haptiques / toasts (fiche votée, tâche déplacée, quiz complété, document uploadé)."
+  ]
+}
