@@ -637,12 +637,38 @@ def _demo_json_fallback(prompt: str, system: str):
     return {}
 
 
-def _gemini_models_to_try() -> list[str]:
-    candidates = [GEMINI_MODEL, "gemini-2.5-flash-lite", "gemini-2.0-flash"]
+_WORKING_GEMINI_MODEL: str | None = None
+
+
+def _gemini_models_to_try(gc=None) -> list[str]:
+    candidates = [
+        _WORKING_GEMINI_MODEL,
+        GEMINI_MODEL,
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+    ]
     seen: list[str] = []
     for m in candidates:
         if m and m not in seen:
             seen.append(m)
+    if gc is not None:
+        try:
+            for m in gc.models.list():
+                name = (getattr(m, "name", "") or "").removeprefix("models/")
+                lower = name.lower()
+                actions = getattr(m, "supported_actions", None) or []
+                if (
+                    "gemini" in lower
+                    and not any(bad in lower for bad in ("embedding", "imagen", "veo", "tts", "audio", "robotics", "aqa"))
+                    and (not actions or "generateContent" in actions)
+                    and name not in seen
+                ):
+                    seen.append(name)
+        except Exception as exc:
+            logger.warning("gc.models.list() failed: %s", exc)
     return seen
 
 
@@ -664,11 +690,12 @@ def friendly_gemini_error(exc: Exception) -> str:
     if "RESOURCE_EXHAUSTED" in upper or "429" in upper or "QUOTA" in upper:
         return "Quota gratuit Gemini atteint temporairement. Réessaie dans quelques instants."
     if "NOT_FOUND" in upper or "404" in upper:
-        return f"Modèle Gemini introuvable ({GEMINI_MODEL})."
+        return f"Modèle Gemini introuvable ({msg[:140]})."
     return f"Le service IA Gemini est indisponible ({type(exc).__name__}: {msg[:120]})."
 
 
 async def ask_json(prompt: str, system: str):
+    global _WORKING_GEMINI_MODEL
     sys = (
         system
         + " Réponds UNIQUEMENT avec du JSON valide, sans texte ni balises markdown autour."
@@ -677,7 +704,7 @@ async def ask_json(prompt: str, system: str):
     if gc is None:
         return _demo_json_fallback(prompt, sys)
     last_exc: Exception | None = None
-    for model_name in _gemini_models_to_try():
+    for model_name in _gemini_models_to_try(gc):
         try:
             full_prompt = f"{sys}\n\n---\n\n{prompt}"
             resp = await asyncio.to_thread(
@@ -688,6 +715,7 @@ async def ask_json(prompt: str, system: str):
                     response_mime_type="application/json",
                 ),
             )
+            _WORKING_GEMINI_MODEL = model_name
             return parse_json(resp.text or "{}")
         except (json.JSONDecodeError, ValueError) as exc:
             logger.error("LLM JSON parse failed (%s): %s", model_name, exc)
@@ -704,6 +732,7 @@ async def ask_json(prompt: str, system: str):
 
 
 async def stream_llm(prompt: str, system: str):
+    global _WORKING_GEMINI_MODEL
     gc = _gemini_client()
     if gc is None:
         demo = (
@@ -724,8 +753,9 @@ async def stream_llm(prompt: str, system: str):
     loop = asyncio.get_running_loop()
 
     def _run_stream():
+        global _WORKING_GEMINI_MODEL
         last_exc: Exception | None = None
-        for model_name in _gemini_models_to_try():
+        for model_name in _gemini_models_to_try(gc):
             emitted = False
             try:
                 full_prompt = f"{system}\n\n---\n\n{prompt}" if system else prompt
@@ -736,6 +766,7 @@ async def stream_llm(prompt: str, system: str):
                     if getattr(chunk, "text", None):
                         emitted = True
                         loop.call_soon_threadsafe(queue.put_nowait, ("delta", chunk.text))
+                _WORKING_GEMINI_MODEL = model_name
                 loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
                 return
             except Exception as exc:
