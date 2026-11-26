@@ -5,16 +5,20 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import asyncio
+import hashlib
 import io
 import json
 import logging
 import mimetypes
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import bcrypt
+import httpx
 import jwt
 from fastapi import HTTPException, Request
 from google import genai
@@ -247,9 +251,26 @@ async def get_current_user(request: Request) -> dict:
     return await user_from_token(token)
 
 
-# ---------- Local Object Storage ----------
+# ---------- Object Storage (Cloudinary + Local fallback) ----------
+def _cloudinary_creds() -> tuple[str, str, str] | None:
+    url = os.environ.get("CLOUDINARY_URL", "").strip()
+    if url.startswith("cloudinary://"):
+        parsed = urlparse(url)
+        if parsed.username and parsed.password and parsed.hostname:
+            return parsed.hostname, parsed.username, parsed.password
+    cn = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+    ak = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+    as_ = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+    if cn and ak and as_:
+        return cn, ak, as_
+    return None
+
+
 def init_storage(force: bool = False) -> str:
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    if _cloudinary_creds():
+        logger.info("Cloudinary permanent storage enabled")
+        return "cloudinary"
     return str(STORAGE_DIR)
 
 
@@ -262,6 +283,34 @@ def _safe_storage_path(rel_path: str) -> Path:
 
 
 async def put_object(path: str, data: bytes, content_type: str) -> dict:
+    clean = path.lstrip("/").replace("\\", "/")
+    creds = _cloudinary_creds()
+    if creds:
+        cloud_name, api_key, api_secret = creds
+        public_id = f"studyhub/{clean}"
+        ts = str(int(time.time()))
+        to_sign = f"overwrite=true&public_id={public_id}&timestamp={ts}{api_secret}"
+        sig = hashlib.sha1(to_sign.encode("utf-8")).hexdigest()
+        async with httpx.AsyncClient(timeout=60) as http:
+            resp = await http.post(
+                f"https://api.cloudinary.com/v1_1/{cloud_name}/raw/upload",
+                data={
+                    "api_key": api_key,
+                    "timestamp": ts,
+                    "public_id": public_id,
+                    "overwrite": "true",
+                    "signature": sig,
+                },
+                files={"file": (Path(clean).name or "file", data, content_type or "application/octet-stream")},
+            )
+        if resp.status_code >= 400:
+            logger.error("Cloudinary upload failed (%s): %s", resp.status_code, resp.text)
+            raise HTTPException(
+                502,
+                "Erreur lors de l'envoi vers Cloudinary (vérifie que le fichier fait moins de 10 Mo sur le plan gratuit).",
+            )
+        return {"path": path, "size": len(data), "content_type": content_type}
+
     def _write():
         init_storage()
         target = _safe_storage_path(path)
@@ -273,6 +322,16 @@ async def put_object(path: str, data: bytes, content_type: str) -> dict:
 
 
 async def get_object(path: str) -> bytes:
+    clean = path.lstrip("/").replace("\\", "/")
+    creds = _cloudinary_creds()
+    if creds:
+        cloud_name, _, _ = creds
+        url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/studyhub/{clean}"
+        async with httpx.AsyncClient(timeout=60, follow_redirects=True) as http:
+            resp = await http.get(url)
+        if resp.status_code == 200:
+            return resp.content
+
     def _read():
         target = _safe_storage_path(path)
         if not target.exists():
