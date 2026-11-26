@@ -331,6 +331,10 @@ async def get_object(path: str) -> bytes:
             resp = await http.get(url)
         if resp.status_code == 200:
             return resp.content
+        if resp.status_code in (401, 403):
+            raise PermissionError(
+                "Cloudinary bloque la lecture de ce fichier (active 'Allow delivery of PDF and ZIP files' dans Cloudinary → Settings → Security)."
+            )
 
     def _read():
         target = _safe_storage_path(path)

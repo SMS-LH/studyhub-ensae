@@ -435,6 +435,13 @@ async def document_file(
         raise HTTPException(404, "Fichier introuvable")
     try:
         data = await get_object(rec["storage_path"])
+    except FileNotFoundError:
+        raise HTTPException(
+            404,
+            "Fichier introuvable sur le serveur (stockage temporaire réinitialisé — redépose le fichier).",
+        )
+    except PermissionError as exc:
+        raise HTTPException(502, str(exc))
     except Exception as exc:
         logger.error("download failed: %s", exc)
         raise HTTPException(502, "Impossible de récupérer le fichier")
