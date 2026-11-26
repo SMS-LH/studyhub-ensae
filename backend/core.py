@@ -39,7 +39,7 @@ db = client[DB_NAME]
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
-JWT_SECRET = os.environ.get("JWT_SECRET", "ensae-studyhub-dev-secret-key-2026")
+JWT_SECRET = os.environ.get("JWT_SECRET", "").strip() or "ensae-studyhub-dev-secret-key-2026"
 APP_NAME = "studyhub"
 MAX_UPLOAD = 100 * 1024 * 1024
 STORAGE_DIR = Path(os.environ.get("STORAGE_DIR") or (ROOT_DIR / "storage")).resolve()
