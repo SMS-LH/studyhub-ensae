@@ -1,10 +1,13 @@
 import { useState } from "react";
 import {
-  Loader2,
+  ArrowLeft,
   BookOpen,
+  GraduationCap,
+  KeyRound,
+  Loader2,
+  MailCheck,
   Sparkles,
   Users,
-  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,8 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
-import { formatError } from "@/lib/api";
-import { ENSAE_CLASSES, ENSAE_FILIERES, EnsaeLogo } from "@/components/common";
+import { api, formatError } from "@/lib/api";
+import { ENSAE_CLASSES, EnsaeLogo } from "@/components/common";
 
 const HERO =
   "https://images.unsplash.com/photo-1642130935796-1409d7e075dd?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=1400";
@@ -39,7 +42,14 @@ const Pillar = ({ icon: Icon, title, text }) => (
 
 export default function AuthPage() {
   const { login, register } = useAuth();
-  const [mode, setMode] = useState("login");
+  const initialResetToken =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("reset_token") || ""
+      : "";
+  const [mode, setMode] = useState(initialResetToken ? "reset" : "login");
+  const [resetToken, setResetToken] = useState(initialResetToken);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -57,6 +67,29 @@ export default function AuthPage() {
     e?.preventDefault();
     setLoading(true);
     try {
+      if (mode === "forgot") {
+        await api.post("/auth/forgot-password", { email: form.email });
+        setForgotSent(true);
+        toast.success("Si un compte existe avec cet email, un lien a été envoyé.");
+        return;
+      }
+      if (mode === "reset") {
+        if (form.password !== confirmPassword) {
+          toast.error("Les deux mots de passe ne correspondent pas.");
+          return;
+        }
+        await api.post("/auth/reset-password", {
+          token: resetToken,
+          new_password: form.password,
+        });
+        toast.success("Mot de passe mis à jour ! Tu peux te connecter.");
+        setResetToken("");
+        setConfirmPassword("");
+        setForm((f) => ({ ...f, password: "" }));
+        window.history.replaceState({}, "", "/connexion");
+        setMode("login");
+        return;
+      }
       if (demoCreds) await login(demoCreds[0], demoCreds[1]);
       else if (mode === "login") await login(form.email, form.password);
       else await register(form);
@@ -136,131 +169,232 @@ export default function AuthPage() {
             </div>
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900">
-            {mode === "login" ? "Content de te revoir" : "Rejoins ta promo"}
+            {mode === "login"
+              ? "Content de te revoir"
+              : mode === "register"
+                ? "Rejoins ta promo"
+                : mode === "forgot"
+                  ? "Mot de passe oublié"
+                  : "Nouveau mot de passe"}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             {mode === "login"
               ? "Connecte-toi pour retrouver tes fiches, tuteurs et amphis."
-              : "Crée ton profil étudiant ENSAE en 30 secondes."}
+              : mode === "register"
+                ? "Crée ton profil étudiant ENSAE en 30 secondes."
+                : mode === "forgot"
+                  ? "Entre ton email pour recevoir un lien de réinitialisation."
+                  : "Choisis un nouveau mot de passe (6 caractères minimum)."}
           </p>
 
-          <div className="mt-6 grid grid-cols-2 p-1 bg-slate-100 rounded-full">
-            {[
-              ["login", "Connexion", "auth-login-tab"],
-              ["register", "Inscription", "auth-register-tab"],
-            ].map(([m, l, t]) => (
-              <button
-                key={m}
-                data-testid={t}
-                onClick={() => setMode(m)}
-                className={`py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${mode === m ? "bg-white shadow text-primary" : "text-slate-500"}`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+          {(mode === "login" || mode === "register") && (
+            <div className="mt-6 grid grid-cols-2 p-1 bg-slate-100 rounded-full">
+              {[
+                ["login", "Connexion", "auth-login-tab"],
+                ["register", "Inscription", "auth-register-tab"],
+              ].map(([m, l, t]) => (
+                <button
+                  key={m}
+                  data-testid={t}
+                  onClick={() => setMode(m)}
+                  className={`py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${mode === m ? "bg-white shadow text-primary" : "text-slate-500"}`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <form
-            onSubmit={submit}
-            className="mt-6 space-y-4"
-            data-testid="auth-form"
-          >
-            {mode === "register" && (
-              <>
+          {mode === "forgot" && forgotSent ? (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                <MailCheck size={18} />
+                <span>Vérifie ta boîte mail</span>
+              </div>
+              <p className="text-sm text-slate-600">
+                Si un compte existe pour <strong>{form.email}</strong>, tu vas recevoir un lien valable 1 heure pour réinitialiser ton mot de passe. Pense à vérifier tes spams.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setForgotSent(false);
+                  setMode("login");
+                }}
+                className="w-full h-10 rounded-full"
+              >
+                <ArrowLeft size={15} className="mr-2" />
+                Retour à la connexion
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={submit}
+              className="mt-6 space-y-4"
+              data-testid="auth-form"
+            >
+              {mode === "register" && (
+                <>
+                  <div>
+                    <Label htmlFor="name">Prénom et nom</Label>
+                    <Input
+                      id="name"
+                      data-testid="auth-name-input"
+                      required
+                      value={form.name}
+                      onChange={set("name")}
+                      placeholder="Amadou Diop"
+                      className="mt-1.5 h-11"
+                    />
+                  </div>
+                  <div>
+                    <Label>Classe ENSAE</Label>
+                    <Select value={form.class_name} onValueChange={set("class_name")}>
+                      <SelectTrigger data-testid="auth-class-select" className="mt-1.5 h-11">
+                        <SelectValue placeholder="Sélectionne ta classe" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ENSAE_CLASSES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
+                    <Checkbox
+                      checked={form.is_parallel_admission}
+                      onCheckedChange={(v) =>
+                        setForm({ ...form, is_parallel_admission: Boolean(v) })
+                      }
+                    />
+                    <span>Admission parallèle</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
+                    <Checkbox
+                      checked={form.is_tutor}
+                      onCheckedChange={(v) =>
+                        setForm({ ...form, is_tutor: Boolean(v) })
+                      }
+                    />
+                    <span>Je souhaite aussi aider comme tuteur / tutrice</span>
+                  </label>
+                  <div>
+                    <Label htmlFor="class_code">
+                      Code d'accès de ta classe (optionnel)
+                    </Label>
+                    <Input
+                      id="class_code"
+                      value={form.class_code || ""}
+                      onChange={set("class_code")}
+                      placeholder="Ex. ISE1ENSAE (donné par ton délégué)"
+                      className="mt-1.5 h-11 font-mono uppercase"
+                    />
+                  </div>
+                </>
+              )}
+
+              {(mode === "login" || mode === "register" || mode === "forgot") && (
                 <div>
-                  <Label htmlFor="name">Prénom et nom</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="name"
-                    data-testid="auth-name-input"
+                    id="email"
+                    type="email"
+                    data-testid="auth-email-input"
                     required
-                    value={form.name}
-                    onChange={set("name")}
-                    placeholder="Amadou Diop"
+                    value={form.email}
+                    onChange={set("email")}
+                    placeholder="prenom.nom@ensae.fr"
                     className="mt-1.5 h-11"
                   />
                 </div>
+              )}
+
+              {(mode === "login" || mode === "register" || mode === "reset") && (
                 <div>
-                  <Label>Classe ENSAE</Label>
-                  <Select value={form.class_name} onValueChange={set("class_name")}>
-                    <SelectTrigger data-testid="auth-class-select" className="mt-1.5 h-11">
-                      <SelectValue placeholder="Sélectionne ta classe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ENSAE_CLASSES.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
-                  <Checkbox
-                    checked={form.is_parallel_admission}
-                    onCheckedChange={(v) =>
-                      setForm({ ...form, is_parallel_admission: Boolean(v) })
-                    }
-                  />
-                  <span>Admission parallèle</span>
-                </label>
-                <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
-                  <Checkbox
-                    checked={form.is_tutor}
-                    onCheckedChange={(v) =>
-                      setForm({ ...form, is_tutor: Boolean(v) })
-                    }
-                  />
-                  <span>Je souhaite aussi aider comme tuteur / tutrice</span>
-                </label>
-                <div>
-                  <Label htmlFor="class_code">
-                    Code d'accès de ta classe (optionnel)
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="pwd">
+                      {mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+                    </Label>
+                    {mode === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotSent(false);
+                          setMode("forgot");
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Mot de passe oublié ?
+                      </button>
+                    )}
+                  </div>
                   <Input
-                    id="class_code"
-                    value={form.class_code || ""}
-                    onChange={set("class_code")}
-                    placeholder="Ex. ISE1ENSAE (donné par ton délégué)"
-                    className="mt-1.5 h-11 font-mono uppercase"
+                    id="pwd"
+                    type="password"
+                    data-testid="auth-password-input"
+                    required
+                    minLength={6}
+                    value={form.password}
+                    onChange={set("password")}
+                    placeholder="6 caractères minimum"
+                    className="mt-1.5 h-11"
                   />
                 </div>
-              </>
-            )}
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                data-testid="auth-email-input"
-                required
-                value={form.email}
-                onChange={set("email")}
-                placeholder="prenom.nom@ensae.fr"
-                className="mt-1.5 h-11"
-              />
-            </div>
-            <div>
-              <Label htmlFor="pwd">Mot de passe</Label>
-              <Input
-                id="pwd"
-                type="password"
-                data-testid="auth-password-input"
-                required
-                minLength={6}
-                value={form.password}
-                onChange={set("password")}
-                placeholder="6 caractères minimum"
-                className="mt-1.5 h-11"
-              />
-            </div>
-            <Button
-              type="submit"
-              data-testid="auth-submit-button"
-              disabled={loading}
-              className="w-full h-11 rounded-full font-semibold"
-            >
-              {loading && <Loader2 className="animate-spin mr-2" size={16} />}
-              {mode === "login" ? "Se connecter" : "Créer mon compte ENSAE"}
-            </Button>
-          </form>
+              )}
+
+              {mode === "reset" && (
+                <div>
+                  <Label htmlFor="confirm-pwd">Confirmer le mot de passe</Label>
+                  <Input
+                    id="confirm-pwd"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Répète le mot de passe"
+                    className="mt-1.5 h-11"
+                  />
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                data-testid="auth-submit-button"
+                disabled={loading}
+                className="w-full h-11 rounded-full font-semibold"
+              >
+                {loading && <Loader2 className="animate-spin mr-2" size={16} />}
+                {mode === "login"
+                  ? "Se connecter"
+                  : mode === "register"
+                    ? "Créer mon compte ENSAE"
+                    : mode === "forgot"
+                      ? "Envoyer le lien de réinitialisation"
+                      : (
+                        <>
+                          <KeyRound size={15} className="mr-2" />
+                          Enregistrer le nouveau mot de passe
+                        </>
+                      )}
+              </Button>
+
+              {(mode === "forgot" || mode === "reset") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (mode === "reset") {
+                      window.history.replaceState({}, "", "/connexion");
+                    }
+                    setMode("login");
+                  }}
+                  className="w-full text-center text-xs text-slate-500 hover:text-primary pt-1"
+                >
+                  Retour à la connexion
+                </button>
+              )}
+            </form>
+          )}
         </div>
       </section>
     </div>
