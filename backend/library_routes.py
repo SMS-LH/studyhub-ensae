@@ -21,6 +21,7 @@ from core import (
     is_senior_tutor,
     logger,
     new_id,
+    normalize_class,
     normalize_ensae_level,
     now_iso,
     put_object,
@@ -180,6 +181,7 @@ async def upload_document(
     title: str = Form(...),
     description: str = Form(""),
     subject: str = Form("Autre"),
+    class_name: str = Form(""),
     level: str = Form(""),
     filiere: str = Form(""),
     annee: str = Form(""),
@@ -189,12 +191,21 @@ async def upload_document(
     tags: str = Form(""),
     user: dict = Depends(get_current_user),
 ):
+    target_class = ""
+    if class_name.strip():
+        target_class = normalize_class(class_name)
+    elif level.strip():
+        try:
+            target_class = normalize_class(level)
+        except HTTPException:
+            target_class = level.strip()
+
     fil, yr = normalize_ensae_level(
         filiere or user.get("filiere", ""),
         annee or (user.get("annee") if not filiere else None),
     )
-    computed_level = level.strip() or format_ensae_level(fil, yr)
-    user_level = format_ensae_level(user.get("filiere"), user.get("annee"))
+    computed_level = target_class or format_ensae_level(fil, yr)
+    user_level = user.get("class_name") or format_ensae_level(user.get("filiere"), user.get("annee"))
     shared_from = user_level if (user_level and computed_level and user_level != computed_level) else ""
     file_rec, text, fmt = await store_upload(file, user)
     doc = {
@@ -202,6 +213,7 @@ async def upload_document(
         "title": title.strip(),
         "description": description.strip(),
         "subject": subject,
+        "class_name": computed_level,
         "level": computed_level,
         "filiere": fil,
         "annee": yr,
@@ -245,6 +257,7 @@ async def list_documents(
     q: str = "",
     subject: str = "",
     format: str = "",
+    class_name: str = "",
     level: str = "",
     filiere: str = "",
     annee: int | None = None,
@@ -257,10 +270,15 @@ async def list_documents(
     user: dict = Depends(get_current_user),
 ):
     flt: dict = {"is_deleted": False}
-    # Scope library to the user's own class by default
+    # Scope library to the user's own class by default (unless admin/moderator or explicit class filter)
+    u_cls = (user.get("class_name") or "").strip()
     u_fil = (user.get("filiere") or "").strip().upper()
     u_yr = user.get("annee")
-    if u_fil and user.get("role") != "admin":
+    if class_name:
+        flt["$or"] = [{"class_name": class_name}, {"level": class_name}]
+    elif u_cls and user.get("role") not in ("admin", "moderator"):
+        flt["$or"] = [{"class_name": u_cls}, {"level": u_cls}]
+    elif u_fil and user.get("role") not in ("admin", "moderator"):
         flt["filiere"] = u_fil
         if u_yr is not None:
             flt["annee"] = u_yr
@@ -287,13 +305,17 @@ async def list_documents(
         flt["author_id"] = user["id"]
     if q:
         rx = {"$regex": re.escape(q), "$options": "i"}
-        flt["$or"] = [
+        q_or = [
             {"title": rx},
             {"description": rx},
             {"tags": rx},
             {"concepts": rx},
             {"subject": rx},
         ]
+        if "$or" in flt:
+            flt["$and"] = [{"$or": flt.pop("$or")}, {"$or": q_or}]
+        else:
+            flt["$or"] = q_or
     docs = (
         await db.documents.find(flt, {"_id": 0, "text_content": 0})
         .sort("updated_at", -1)

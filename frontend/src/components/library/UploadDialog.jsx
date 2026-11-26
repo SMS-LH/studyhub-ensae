@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, formatError } from "@/lib/api";
-import { ACCEPT, ENSAE_FILIERES, SUBJECTS } from "@/components/common";
+import { ACCEPT, ENSAE_CLASSES, SUBJECTS } from "@/components/common";
 
 export const FilePicker = ({ file, onChange, testid }) => (
   <label
@@ -50,8 +50,7 @@ const EMPTY = {
   title: "",
   description: "",
   subject: "",
-  filiere: "ISE",
-  annee: "1",
+  class_name: "",
   is_annale: false,
   annale_year: "2025",
   professor: "",
@@ -64,8 +63,6 @@ export const UploadDialog = ({ open, onOpenChange, onUploaded }) => {
   const [progress, setProgress] = useState(null);
   const set = (k) => (e) =>
     setForm({ ...form, [k]: e?.target !== undefined ? e.target.value : e });
-
-  const years = ENSAE_FILIERES[form.filiere] || [1, 2, 3];
 
   const pick = (f) => {
     setFile(f);
@@ -86,9 +83,10 @@ export const UploadDialog = ({ open, onOpenChange, onUploaded }) => {
     fd.append("title", form.title);
     fd.append("description", form.description);
     fd.append("subject", form.subject || "Autre");
-    fd.append("filiere", form.filiere);
-    fd.append("annee", form.annee);
-    fd.append("level", `${form.filiere} ${form.annee}`);
+    if (form.class_name) {
+      fd.append("class_name", form.class_name);
+      fd.append("level", form.class_name);
+    }
     fd.append("is_annale", String(form.is_annale));
     fd.append("annale_year", form.is_annale ? form.annale_year : "");
     fd.append("professor", form.professor);
@@ -166,52 +164,26 @@ export const UploadDialog = ({ open, onOpenChange, onUploaded }) => {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Filière</Label>
-              <Select
-                value={form.filiere}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    filiere: v,
-                    annee:
-                      Number(form.annee) > ENSAE_FILIERES[v].slice(-1)[0]
-                        ? "1"
-                        : form.annee,
-                  })
-                }
+          <div>
+            <Label>Classe cible (partage inter-promos possible)</Label>
+            <Select value={form.class_name} onValueChange={set("class_name")}>
+              <SelectTrigger
+                data-testid="upload-level-select"
+                className="mt-1.5"
               >
-                <SelectTrigger
-                  data-testid="upload-filiere-select"
-                  className="mt-1.5"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ISE">ISE</SelectItem>
-                  <SelectItem value="AS">AS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Année</Label>
-              <Select value={form.annee} onValueChange={set("annee")}>
-                <SelectTrigger
-                  data-testid="upload-level-select"
-                  className="mt-1.5"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {form.filiere} {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <SelectValue placeholder="Ma classe (par défaut)" />
+              </SelectTrigger>
+              <SelectContent>
+                {ENSAE_CLASSES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Tu peux choisir une autre classe pour lui transmettre une annale ou une fiche.
+            </p>
           </div>
           <div className="space-y-2.5 rounded-xl border border-slate-200 p-3 bg-slate-50">
             <div className="flex items-center justify-between gap-3">

@@ -143,10 +143,16 @@ function UsersTab() {
     }
   };
 
-  const toggleMod = async (id, promote) => {
+  const setUserRole = async (id, role) => {
     try {
-      await api.post(`/moderation/users/${id}/role`, { role: promote ? "moderator" : "student" });
-      toast.success(promote ? "Modérateur promu" : "Rôle retiré");
+      await api.post(`/moderation/users/${id}/role`, { role });
+      toast.success(
+        role === "moderator"
+          ? "Modérateur BDE promu"
+          : role === "class_admin"
+            ? "Délégué de classe nommé"
+            : "Rôle réinitialisé (étudiant)",
+      );
       load();
     } catch (e) {
       toast.error(formatError(e));
@@ -172,7 +178,7 @@ function UsersTab() {
           </h3>
           <div className="space-y-2">
             {pending.map((u) => (
-              <UserRow key={u.id} u={u} onVerify={verify} onToggleMod={toggleMod} />
+              <UserRow key={u.id} u={u} onVerify={verify} onSetRole={setUserRole} />
             ))}
           </div>
         </div>
@@ -184,7 +190,7 @@ function UsersTab() {
           </h3>
           <div className="space-y-2">
             {others.map((u) => (
-              <UserRow key={u.id} u={u} onVerify={verify} onToggleMod={toggleMod} />
+              <UserRow key={u.id} u={u} onVerify={verify} onSetRole={setUserRole} />
             ))}
           </div>
         </div>
@@ -193,8 +199,10 @@ function UsersTab() {
   );
 }
 
-function UserRow({ u, onVerify, onToggleMod }) {
+function UserRow({ u, onVerify, onSetRole }) {
   const isMod = u.role === "moderator" || u.role === "admin";
+  const isClassAdmin = u.role === "class_admin";
+  const clsLabel = u.class_name || (u.filiere ? `${u.filiere} ${u.annee}` : "");
   return (
     <div className="surface p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
       <Initials name={u.name} className="h-9 w-9 text-sm shrink-0" />
@@ -202,9 +210,9 @@ function UserRow({ u, onVerify, onToggleMod }) {
         <div className="font-semibold text-sm text-slate-900">{u.name}</div>
         <div className="text-xs text-slate-500 truncate">{u.email}</div>
         <div className="flex gap-1 mt-1 flex-wrap">
-          {u.filiere && (
+          {clsLabel && (
             <span className="text-[10px] bg-blue-50 border border-blue-200 text-primary rounded px-1.5 py-0.5">
-              {u.filiere} {u.annee}
+              {clsLabel}
             </span>
           )}
           {u.is_verified && (
@@ -217,9 +225,14 @@ function UserRow({ u, onVerify, onToggleMod }) {
               En attente
             </span>
           )}
+          {isClassAdmin && (
+            <Badge className="text-[10px] h-5 bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+              Délégué de classe
+            </Badge>
+          )}
           {isMod && (
             <Badge className="text-[10px] h-5 bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-100">
-              Modérateur
+              Modérateur BDE
             </Badge>
           )}
         </div>
@@ -245,14 +258,24 @@ function UserRow({ u, onVerify, onToggleMod }) {
           </>
         )}
         {u.role !== "admin" && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className={`rounded-full h-8 px-3 text-xs ${isMod ? "text-slate-500" : "text-purple-600"}`}
-            onClick={() => onToggleMod(u.id, !isMod)}
-          >
-            {isMod ? "Retirer modérateur" : "Promouvoir modérateur"}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={`rounded-full h-8 px-3 text-xs ${isClassAdmin ? "text-slate-500" : "text-primary"}`}
+              onClick={() => onSetRole(u.id, isClassAdmin ? "student" : "class_admin")}
+            >
+              {isClassAdmin ? "Retirer délégué" : "Nommer délégué"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className={`rounded-full h-8 px-3 text-xs ${isMod ? "text-slate-500" : "text-purple-600"}`}
+              onClick={() => onSetRole(u.id, isMod ? "student" : "moderator")}
+            >
+              {isMod ? "Retirer modérateur" : "Promouvoir modérateur"}
+            </Button>
+          </>
         )}
       </div>
     </div>
@@ -381,7 +404,7 @@ export default function ModerationPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const isMod = user?.role === "moderator" || user?.role === "admin";
+  const isMod = ["moderator", "admin", "class_admin"].includes(user?.role);
 
   useEffect(() => {
     if (!isMod) {

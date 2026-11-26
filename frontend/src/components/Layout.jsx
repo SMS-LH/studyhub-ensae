@@ -154,9 +154,10 @@ export default function Layout() {
                 >
                   <UserRound size={14} className="mr-2" /> Mon profil & stats
                 </DropdownMenuItem>
-                {(user.role === "moderator" || user.role === "admin") && (
+                {["moderator", "admin", "class_admin"].includes(user.role) && (
                   <DropdownMenuItem onClick={() => navigate("/moderation")}>
-                    <ShieldCheck size={14} className="mr-2" /> Modération BDE
+                    <ShieldCheck size={14} className="mr-2" />{" "}
+                    {user.role === "class_admin" ? "Gestion de classe" : "Modération BDE"}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem

@@ -13,6 +13,7 @@ from core import (
     get_current_user,
     hash_password,
     new_id,
+    normalize_class,
     normalize_ensae_level,
     now_iso,
     public_user,
@@ -27,6 +28,8 @@ class RegisterIn(BaseModel):
     password: str = Field(min_length=6)
     name: str = Field(min_length=1)
     university: str = "ENSAE"
+    class_name: str = ""          # e.g. "ISE1 Math", "AS2"
+    # Legacy fields kept for compat
     filiere: str = ""
     annee: int | None = None
     class_code: str = ""
@@ -54,38 +57,48 @@ async def register(body: RegisterIn, response: Response):
     email = body.email.lower()
     if await db.users.find_one({"email": email}):
         raise HTTPException(400, "Un compte existe déjà avec cet email")
-    filiere, annee = normalize_ensae_level(body.filiere, body.annee)
-    level_label = format_ensae_level(filiere, annee)
+
+    # Resolve class_name: prefer new field, fall back to legacy filiere+annee
+    from core import ENSAE_CLASSES
+    class_name = normalize_class(body.class_name) if body.class_name.strip() else ""
+    if not class_name and body.filiere:
+        # Legacy path: build from filiere+annee
+        filiere_l, annee_l = normalize_ensae_level(body.filiere, body.annee)
+        if filiere_l and annee_l:
+            class_name = format_ensae_level(filiere_l, annee_l)
+
     tutor_subjects = [s.strip() for s in body.tutor_subjects if s.strip()]
     weaknesses = [w.strip() for w in body.weaknesses if w.strip()]
     is_first_user = await db.users.count_documents({}) == 0
     is_ensae_email = email.endswith("@ensae.fr") or email.endswith("@ensae.sn")
+
     code = body.class_code.strip().upper()
     promo_ws = None
-    if filiere and annee:
+    if class_name:
         promo_ws = await db.workspaces.find_one(
-            {"type": "promo", "filiere": filiere, "annee": annee}, {"_id": 0}
+            {"type": "promo", "class_name": class_name}, {"_id": 0}
         )
+        if not promo_ws:
+            # Legacy lookup
+            promo_ws = await db.workspaces.find_one(
+                {"type": "promo", "class_label": class_name}, {"_id": 0}
+            )
     valid_class_code = bool(
         code and promo_ws and code == (promo_ws.get("invite_code") or "").upper()
     )
     role = "moderator" if is_first_user else "student"
-    is_verified = True if (is_first_user or is_ensae_email or valid_class_code) else False
+    is_verified = bool(is_first_user or is_ensae_email or valid_class_code)
     user = {
         "id": new_id(),
         "email": email,
         "name": body.name.strip(),
         "university": body.university.strip() or "ENSAE",
-        "filiere": filiere,
-        "annee": annee,
-        "field": filiere,
-        "year": level_label,
+        "class_name": class_name,
         "is_parallel_admission": bool(body.is_parallel_admission),
         "is_tutor": bool(body.is_tutor),
         "tutor_subjects": tutor_subjects if body.is_tutor else [],
         "tutor_slots": [],
         "contact_info": body.contact_info.strip(),
-        "tutor_available_this_week": True,
         "weaknesses": weaknesses,
         "role": role,
         "is_verified": is_verified,
@@ -144,6 +157,7 @@ async def me(user: dict = Depends(get_current_user)):
 
 @router.get("/users")
 async def list_users(
+    class_name: str = "",
     filiere: str = "",
     annee: int | None = None,
     is_tutor: bool | None = None,
@@ -152,6 +166,8 @@ async def list_users(
     user: dict = Depends(get_current_user),
 ):
     flt: dict = {"role": {"$ne": "admin"}}
+    if class_name:
+        flt["class_name"] = class_name.strip()
     if filiere:
         flt["filiere"] = filiere.strip().upper()
     if annee is not None:

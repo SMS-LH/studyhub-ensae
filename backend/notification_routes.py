@@ -142,17 +142,6 @@ async def generate_reminders(user: dict):
                 "/tutorat",
             )
 
-    for b in (await compute_stats(user["id"]))["badges"]:
-        if b["unlocked"]:
-            await notify(
-                user["id"],
-                f"badge:{b['id']}",
-                "badge",
-                "Nouveau badge débloqué !",
-                f"Tu as obtenu le badge « {b['name']} » : {b['description'].lower()}.",
-                f"/profil/{user['id']}",
-            )
-
 
 @router.get("/notifications")
 async def list_notifications(user: dict = Depends(get_current_user)):

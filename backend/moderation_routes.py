@@ -7,8 +7,8 @@ router = APIRouter(prefix="/api")
 
 
 def require_moderator(user: dict):
-    if user.get("role") not in ("moderator", "admin"):
-        raise HTTPException(403, "Réservé aux délégués et modérateurs BDE")
+    if user.get("role") not in ("moderator", "admin", "class_admin"):
+        raise HTTPException(403, "Réservé aux délégués de classe et modérateurs BDE")
 
 
 class ReportIn(BaseModel):
@@ -24,7 +24,7 @@ class ResolveReportIn(BaseModel):
 
 
 class RoleIn(BaseModel):
-    role: str = Field(pattern="^(student|moderator)$")
+    role: str = Field(pattern="^(student|class_admin|moderator)$")
 
 
 @router.post("/reports")
@@ -116,8 +116,11 @@ async def resolve_report(
 @router.get("/moderation/users")
 async def moderation_users(user: dict = Depends(get_current_user)):
     require_moderator(user)
+    flt = {}
+    if user.get("role") == "class_admin" and user.get("class_name"):
+        flt["class_name"] = user["class_name"]
     users = (
-        await db.users.find({}, {"_id": 0, "password_hash": 0})
+        await db.users.find(flt, {"_id": 0, "password_hash": 0})
         .sort("created_at", -1)
         .to_list(300)
     )
@@ -132,6 +135,8 @@ async def verify_user(
     target = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not target:
         raise HTTPException(404, "Utilisateur introuvable")
+    if user.get("role") == "class_admin" and target.get("class_name") != user.get("class_name"):
+        raise HTTPException(403, "Tu ne peux valider que les étudiants de ta classe")
     status = "verified" if approved else "rejected"
     await db.users.update_one(
         {"id": user_id},
@@ -144,7 +149,8 @@ async def verify_user(
 async def update_user_role(
     user_id: str, body: RoleIn, user: dict = Depends(get_current_user)
 ):
-    require_moderator(user)
+    if user.get("role") not in ("moderator", "admin"):
+        raise HTTPException(403, "Seul un modérateur BDE peut nommer un délégué ou modérateur")
     if user_id == user["id"] and body.role != "moderator":
         raise HTTPException(400, "Tu ne peux pas te retirer toi-même les droits")
     target = await db.users.find_one({"id": user_id}, {"_id": 0})

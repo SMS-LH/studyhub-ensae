@@ -38,6 +38,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   EmptyState,
   EnsaeBadge,
+  ENSAE_CLASSES,
   Initials,
   PageHeader,
   SUBJECTS,
@@ -152,7 +153,7 @@ export default function TutoringPage() {
     try {
       const reqParams = subjectFilter !== "all" ? { subject: subjectFilter } : {};
       const dirParams = {
-        ...(dirFiliere !== "all" ? { filiere: dirFiliere } : {}),
+        ...(dirFiliere !== "all" ? { class_name: dirFiliere } : {}),
         ...(dirSearch.trim() ? { q: dirSearch.trim() } : {}),
       };
       const [r1, r2, r3] = await Promise.all([
@@ -280,15 +281,6 @@ export default function TutoringPage() {
         title="Entraide ouverte entre toutes les promotions."
         actions={
           <div className="flex flex-wrap gap-2">
-            {user.is_tutor && (
-              <Button
-                variant="outline"
-                onClick={toggleAvailability}
-                className="rounded-full h-11 px-4"
-              >
-                Dispo cette semaine
-              </Button>
-            )}
             <Button
               data-testid="tutoring-new-request-button"
               onClick={() => setCreateOpen(true)}
@@ -440,6 +432,7 @@ export default function TutoringPage() {
                         {t.name}
                       </Link>
                       <EnsaeBadge
+                        class_name={t.class_name}
                         filiere={t.filiere}
                         annee={t.annee}
                         isTutor={t.is_tutor}
@@ -456,11 +449,6 @@ export default function TutoringPage() {
                     <div className="text-[11px] text-emerald-700 bg-emerald-50/70 rounded-lg px-2.5 py-1">
                       Recommandé pour : <strong>{t.matched_weaknesses.join(", ")}</strong>
                     </div>
-                  )}
-                  {t.tutor_available_this_week !== false && (
-                    <span className="inline-flex items-center gap-1 self-start text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-0.5">
-                      ● Disponible cette semaine
-                    </span>
                   )}
                   {t.bio && (
                     <p className="text-sm text-slate-600 line-clamp-2">{t.bio}</p>
@@ -645,9 +633,10 @@ export default function TutoringPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes filières</SelectItem>
-                <SelectItem value="ISE">ISE</SelectItem>
-                <SelectItem value="AS">AS</SelectItem>
+                <SelectItem value="all">Toutes classes</SelectItem>
+                {ENSAE_CLASSES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -677,6 +666,7 @@ export default function TutoringPage() {
                       {u.name}
                     </div>
                     <EnsaeBadge
+                      class_name={u.class_name}
                       filiere={u.filiere}
                       annee={u.annee}
                       isTutor={u.is_tutor}

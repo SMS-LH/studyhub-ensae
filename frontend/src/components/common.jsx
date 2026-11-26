@@ -13,6 +13,19 @@ import {
   Clock,
 } from "lucide-react";
 
+export const ENSAE_CLASSES = [
+  "ISEP1",
+  "ISEP2",
+  "ISE1-Cycle Long",
+  "ISE1 Math",
+  "ISE1 Eco",
+  "ISE2",
+  "ISE3",
+  "AS1",
+  "AS2",
+  "AS3",
+];
+
 export const ENSAE_FILIERES = {
   ISE: [1, 2, 3, 4, 5],
   AS: [1, 2, 3],
@@ -101,6 +114,7 @@ export const EnsaeLogo = ({ className = "h-9 w-9" }) => (
 );
 
 export const EnsaeBadge = ({
+  class_name,
   filiere,
   annee,
   isTutor,
@@ -108,13 +122,13 @@ export const EnsaeBadge = ({
   verificationStatus,
   className = "",
 }) => {
-  if (!filiere && !isTutor && !isParallel) return null;
+  const label = class_name || (filiere ? `${filiere}${annee ? ` ${annee}` : ""}` : "");
+  if (!label && !isTutor && !isParallel) return null;
   return (
     <span className={`inline-flex items-center gap-1.5 flex-wrap ${className}`}>
-      {filiere && (
+      {label && (
         <span className="text-[11px] font-bold bg-blue-900 text-white rounded-md px-2 py-0.5">
-          {filiere}
-          {annee ? ` ${annee}` : ""}
+          {label}
         </span>
       )}
       {isParallel && (

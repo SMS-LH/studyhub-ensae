@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, formatError } from "@/lib/api";
-import { ENSAE_FILIERES, SUBJECTS } from "@/components/common";
+import { ENSAE_CLASSES, SUBJECTS } from "@/components/common";
 
 export const ProfileEditDialog = ({ open, onOpenChange, profile, onSaved }) => {
   const [form, setForm] = useState(null);
@@ -29,14 +29,12 @@ export const ProfileEditDialog = ({ open, onOpenChange, profile, onSaved }) => {
     if (open)
       setForm({
         ...profile,
-        filiere: profile.filiere || "ISE",
-        annee: profile.annee ? String(profile.annee) : "1",
+        class_name: profile.class_name || (profile.filiere && profile.annee ? `${profile.filiere} ${profile.annee}` : ""),
         is_parallel_admission: Boolean(profile.is_parallel_admission),
         is_tutor: Boolean(profile.is_tutor),
         tutor_subjects: profile.tutor_subjects || [],
         tutor_slots: (profile.tutor_slots || []).join(", "),
         contact_info: profile.contact_info || "",
-        tutor_available_this_week: profile.tutor_available_this_week ?? true,
         weaknesses: profile.weaknesses || [],
         interests: (profile.interests || []).join(", "),
         skills: profile.skills?.length
@@ -70,17 +68,14 @@ export const ProfileEditDialog = ({ open, onOpenChange, profile, onSaved }) => {
         : [...cur, sub],
     });
   };
-  const years = ENSAE_FILIERES[form.filiere] || [1, 2, 3];
 
   const submit = async (e) => {
     e.preventDefault();
     const body = {
       name: form.name,
       university: form.university || "ENSAE",
-      filiere: form.filiere,
-      annee: form.annee ? Number(form.annee) : null,
-      field: form.filiere,
-      year: `${form.filiere} ${form.annee}`,
+      class_name: form.class_name || "",
+      year: form.class_name || "",
       is_parallel_admission: Boolean(form.is_parallel_admission),
       is_tutor: Boolean(form.is_tutor),
       tutor_subjects: form.is_tutor ? form.tutor_subjects : [],
@@ -91,7 +86,6 @@ export const ProfileEditDialog = ({ open, onOpenChange, profile, onSaved }) => {
             .filter(Boolean)
         : [],
       contact_info: form.contact_info || "",
-      tutor_available_this_week: Boolean(form.tutor_available_this_week),
       weaknesses: form.weaknesses || [],
       bio: form.bio,
       interests: form.interests
@@ -132,52 +126,23 @@ export const ProfileEditDialog = ({ open, onOpenChange, profile, onSaved }) => {
               className="mt-1.5"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Filière ENSAE</Label>
-              <Select
-                value={form.filiere}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    filiere: v,
-                    annee:
-                      Number(form.annee) > ENSAE_FILIERES[v].slice(-1)[0]
-                        ? "1"
-                        : form.annee,
-                  })
-                }
+          <div>
+            <Label>Classe ENSAE</Label>
+            <Select value={form.class_name} onValueChange={set("class_name")}>
+              <SelectTrigger
+                data-testid="profile-class-select"
+                className="mt-1.5"
               >
-                <SelectTrigger
-                  data-testid="profile-field-select"
-                  className="mt-1.5"
-                >
-                  <SelectValue placeholder="Choisir" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ISE">ISE (Ingénieur)</SelectItem>
-                  <SelectItem value="AS">AS (Analyste)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Année</Label>
-              <Select value={form.annee} onValueChange={set("annee")}>
-                <SelectTrigger
-                  data-testid="profile-year-select"
-                  className="mt-1.5"
-                >
-                  <SelectValue placeholder="Choisir" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {form.filiere} {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <SelectValue placeholder="Sélectionne ta classe" />
+              </SelectTrigger>
+              <SelectContent>
+                {ENSAE_CLASSES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">

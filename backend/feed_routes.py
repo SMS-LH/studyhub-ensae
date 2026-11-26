@@ -2,12 +2,16 @@ import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from core import db, format_ensae_level, get_current_user, new_id, now_iso
+from core import db, format_ensae_level, get_current_user, new_id, now_iso, ENSAE_CLASSES
 
 router = APIRouter(prefix="/api/feed")
 
 
 def _class_filter(user: dict) -> dict:
+    cn = (user.get("class_name") or "").strip()
+    if cn:
+        return {"class_name": cn}
+    # Legacy compat
     fil = (user.get("filiere") or "").strip().upper()
     yr = user.get("annee")
     if fil and yr:
@@ -16,7 +20,7 @@ def _class_filter(user: dict) -> dict:
 
 
 def _is_class_admin(user: dict) -> bool:
-    return user.get("role") in ("moderator", "admin")
+    return user.get("role") in ("moderator", "admin", "class_admin")
 
 
 def _serialize_post(p: dict, user_id: str) -> dict:
@@ -136,9 +140,11 @@ async def create_feed_post(body: FeedPostIn, user: dict = Depends(get_current_us
 
     post = {
         "id": new_id(),
-        "filiere": fil,
-        "annee": yr,
-        "class_label": format_ensae_level(fil, yr) or "ENSAE",
+        "class_name": user.get("class_name") or format_ensae_level(user.get("filiere"), user.get("annee")) or "ENSAE",
+        # Legacy fields for compat
+        "filiere": (user.get("filiere") or "").strip().upper(),
+        "annee": user.get("annee"),
+        "class_label": user.get("class_name") or format_ensae_level(user.get("filiere"), user.get("annee")) or "ENSAE",
         "author_id": user["id"],
         "author_name": user["name"],
         "author_role": user.get("role", "student"),
@@ -157,6 +163,20 @@ async def create_feed_post(body: FeedPostIn, user: dict = Depends(get_current_us
     }
     await db.class_posts.insert_one(dict(post))
     await _notify_mentions(post["text"], user, _class_filter(user), post["id"])
+    if post["kind"] == "annonce":
+        from notification_routes import notify
+
+        members = await db.users.find(_class_filter(user), {"_id": 0, "id": 1}).to_list(300)
+        for m in members:
+            if m["id"] != user["id"]:
+                await notify(
+                    m["id"],
+                    f"annonce:{post['id']}:{m['id']}",
+                    "annonce",
+                    f"Annonce {post['class_label']} · {user['name']}",
+                    post["text"][:100],
+                    "/fil",
+                )
     return _serialize_post(post, user["id"])
 
 

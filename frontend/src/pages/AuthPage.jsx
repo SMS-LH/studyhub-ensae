@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
 import { formatError } from "@/lib/api";
-import { ENSAE_FILIERES, EnsaeLogo } from "@/components/common";
+import { ENSAE_CLASSES, ENSAE_FILIERES, EnsaeLogo } from "@/components/common";
 
 const HERO =
   "https://images.unsplash.com/photo-1642130935796-1409d7e075dd?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85&w=1400";
@@ -45,8 +45,7 @@ export default function AuthPage() {
     password: "",
     name: "",
     university: "ENSAE",
-    filiere: "ISE",
-    annee: "1",
+    class_name: "",
     is_parallel_admission: false,
     is_tutor: false,
   });
@@ -54,19 +53,13 @@ export default function AuthPage() {
   const set = (k) => (e) =>
     setForm({ ...form, [k]: e?.target !== undefined ? e.target.value : e });
 
-  const years = ENSAE_FILIERES[form.filiere] || [1, 2, 3];
-
   const submit = async (e, demoCreds) => {
     e?.preventDefault();
     setLoading(true);
     try {
       if (demoCreds) await login(demoCreds[0], demoCreds[1]);
       else if (mode === "login") await login(form.email, form.password);
-      else
-        await register({
-          ...form,
-          annee: form.annee ? Number(form.annee) : null,
-        });
+      else await register(form);
       toast.success("Bienvenue sur StudyHub ENSAE !");
     } catch (err) {
       toast.error(formatError(err));
@@ -186,52 +179,18 @@ export default function AuthPage() {
                     className="mt-1.5 h-11"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Filière ENSAE</Label>
-                    <Select
-                      value={form.filiere}
-                      onValueChange={(v) =>
-                        setForm({
-                          ...form,
-                          filiere: v,
-                          annee:
-                            Number(form.annee) > ENSAE_FILIERES[v].slice(-1)[0]
-                              ? "1"
-                              : form.annee,
-                        })
-                      }
-                    >
-                      <SelectTrigger
-                        data-testid="auth-filiere-select"
-                        className="mt-1.5 h-11"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ISE">ISE (Ingénieur)</SelectItem>
-                        <SelectItem value="AS">AS (Analyste)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Année</Label>
-                    <Select value={form.annee} onValueChange={set("annee")}>
-                      <SelectTrigger
-                        data-testid="auth-annee-select"
-                        className="mt-1.5 h-11"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {years.map((y) => (
-                          <SelectItem key={y} value={String(y)}>
-                            {form.filiere} {y}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label>Classe ENSAE</Label>
+                  <Select value={form.class_name} onValueChange={set("class_name")}>
+                    <SelectTrigger data-testid="auth-class-select" className="mt-1.5 h-11">
+                      <SelectValue placeholder="Sélectionne ta classe" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENSAE_CLASSES.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
                   <Checkbox
@@ -240,7 +199,7 @@ export default function AuthPage() {
                       setForm({ ...form, is_parallel_admission: Boolean(v) })
                     }
                   />
-                  <span>Admission parallèle (ex : ISE 3)</span>
+                  <span>Admission parallèle</span>
                 </label>
                 <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
                   <Checkbox

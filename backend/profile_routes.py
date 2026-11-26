@@ -10,6 +10,7 @@ from core import (
     get_object,
     logger,
     new_id,
+    normalize_class,
     normalize_ensae_level,
     now_iso,
     public_user,
@@ -29,6 +30,7 @@ class Skill(BaseModel):
 class ProfileIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     university: str = Field(default="ENSAE", max_length=120)
+    class_name: str = Field(default="", max_length=40)
     field: str = Field(default="", max_length=80)
     year: str = Field(default="", max_length=30)
     filiere: str = Field(default="", max_length=10)
@@ -38,7 +40,6 @@ class ProfileIn(BaseModel):
     tutor_subjects: list[str] = Field(default=[], max_length=20)
     tutor_slots: list[str] = Field(default=[], max_length=20)
     contact_info: str = Field(default="", max_length=160)
-    tutor_available_this_week: bool = True
     weaknesses: list[str] = Field(default=[], max_length=20)
     bio: str = Field(default="", max_length=600)
     interests: list[str] = Field(default=[], max_length=20)
@@ -51,15 +52,21 @@ async def update_profile(body: ProfileIn, user: dict = Depends(get_current_user)
     data["name"] = data["name"].strip()
     if not data["name"]:
         raise HTTPException(400, "Le nom est obligatoire")
-    filiere, annee = normalize_ensae_level(
-        data.get("filiere") or data.get("field"), data.get("annee")
-    )
-    data["filiere"] = filiere
-    data["annee"] = annee
-    if filiere:
-        data["field"] = filiere
-    if filiere and annee:
-        data["year"] = format_ensae_level(filiere, annee)
+    cn = normalize_class(data.get("class_name")) if data.get("class_name", "").strip() else ""
+    if cn:
+        data["class_name"] = cn
+        data["year"] = cn
+    else:
+        filiere, annee = normalize_ensae_level(
+            data.get("filiere") or data.get("field"), data.get("annee")
+        )
+        data["filiere"] = filiere
+        data["annee"] = annee
+        if filiere:
+            data["field"] = filiere
+        if filiere and annee:
+            data["year"] = format_ensae_level(filiere, annee)
+            data["class_name"] = data["year"]
     data["university"] = (data.get("university") or "ENSAE").strip()
     data["is_parallel_admission"] = bool(data.get("is_parallel_admission", False))
     data["interests"] = [i.strip() for i in data["interests"] if i.strip()]
@@ -77,7 +84,6 @@ async def update_profile(body: ProfileIn, user: dict = Depends(get_current_user)
         else []
     )
     data["contact_info"] = (data.get("contact_info") or "").strip()
-    data["tutor_available_this_week"] = bool(data.get("tutor_available_this_week", True))
     await db.users.update_one({"id": user["id"]}, {"$set": data})
     if data["name"] != user["name"]:
         await db.workspaces.update_many(

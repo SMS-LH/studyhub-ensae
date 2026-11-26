@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { api, formatError } from "@/lib/api";
 import {
-  ENSAE_FILIERES,
+  ENSAE_CLASSES,
   EmptyState,
   FORMATS,
   PageHeader,
@@ -71,8 +71,7 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all"); // all | courses | annales | validated
   const [filters, setFilters] = useState({
-    filiere: "all",
-    annee: "all",
+    class_name: "all",
     subject: "all",
     format: "all",
     professor: "",
@@ -125,19 +124,8 @@ export default function LibraryPage() {
   };
 
   const setF = (k) => (v) => {
-    if (k === "filiere") {
-      setFilters({ ...filters, filiere: v, annee: "all" });
-    } else {
-      setFilters({ ...filters, [k]: v });
-    }
+    setFilters({ ...filters, [k]: v });
   };
-  const yearOptions =
-    filters.filiere !== "all"
-      ? (ENSAE_FILIERES[filters.filiere] || []).map((y) => [
-          String(y),
-          `${filters.filiere} ${y}`,
-        ])
-      : [1, 2, 3, 4, 5].map((y) => [String(y), `${y}e année`]);
 
   const list = semantic ? semantic.results : docs;
 
@@ -265,21 +253,11 @@ export default function LibraryPage() {
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-3 mb-8">
         <FilterSelect
-          testid="library-filiere-filter"
-          value={filters.filiere}
-          onChange={setF("filiere")}
-          placeholder="Filière (ISE / AS)"
-          options={[
-            ["ISE", "ISE"],
-            ["AS", "AS"],
-          ]}
-        />
-        <FilterSelect
           testid="library-level-filter"
-          value={filters.annee}
-          onChange={setF("annee")}
-          placeholder="Toutes les années"
-          options={yearOptions}
+          value={filters.class_name}
+          onChange={setF("class_name")}
+          placeholder="Toutes les classes"
+          options={ENSAE_CLASSES.map((c) => [c, c])}
         />
         <FilterSelect
           testid="library-faculty-filter"

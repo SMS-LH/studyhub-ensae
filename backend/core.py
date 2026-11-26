@@ -44,6 +44,20 @@ APP_NAME = "studyhub"
 MAX_UPLOAD = 100 * 1024 * 1024
 STORAGE_DIR = Path(os.environ.get("STORAGE_DIR") or (ROOT_DIR / "storage")).resolve()
 
+ENSAE_CLASSES: list[str] = [
+    "ISEP1",
+    "ISEP2",
+    "ISE1-Cycle Long",
+    "ISE1 Math",
+    "ISE1 Eco",
+    "ISE2",
+    "ISE3",
+    "AS1",
+    "AS2",
+    "AS3",
+]
+
+# Legacy compat kept for existing tutoring_routes code
 ENSAE_FILIERES: dict[str, list[int]] = {
     "ISE": [1, 2, 3, 4, 5],
     "AS": [1, 2, 3],
@@ -81,6 +95,21 @@ def word_count(text: str) -> int:
 
 
 # ---------- ENSAE Profile Validation ----------
+def normalize_class(class_name: str | None) -> str:
+    """Normalize and validate a class name against ENSAE_CLASSES."""
+    cn = (class_name or "").strip()
+    if not cn:
+        return ""
+    # Case-insensitive match
+    for valid in ENSAE_CLASSES:
+        if cn.lower() == valid.lower():
+            return valid
+    raise HTTPException(
+        400,
+        f"Classe invalide. Classes disponibles : {', '.join(ENSAE_CLASSES)}"
+    )
+
+
 def normalize_ensae_level(
     filiere: str | None, annee: int | str | None
 ) -> tuple[str, int | None]:
@@ -149,7 +178,6 @@ PROFILE_FIELDS = (
     "tutor_subjects",
     "tutor_slots",
     "contact_info",
-    "tutor_available_this_week",
 )
 
 
@@ -160,11 +188,13 @@ def public_user(u: dict) -> dict:
     }
     if not out.get("university"):
         out["university"] = "ENSAE"
+    class_name = u.get("class_name") or format_ensae_level(u.get("filiere"), u.get("annee")) or ""
     out.update(
         {
+            "class_name": class_name,
+            # Legacy fields kept for compat
             "field": u.get("field") or u.get("filiere") or "",
-            "year": u.get("year")
-            or format_ensae_level(u.get("filiere"), u.get("annee")),
+            "year": u.get("year") or class_name,
             "filiere": u.get("filiere") or "",
             "annee": u.get("annee"),
             "bio": u.get("bio") or "",
@@ -176,7 +206,6 @@ def public_user(u: dict) -> dict:
             "tutor_subjects": u.get("tutor_subjects") or [],
             "tutor_slots": u.get("tutor_slots") or [],
             "contact_info": u.get("contact_info") or "",
-            "tutor_available_this_week": bool(u.get("tutor_available_this_week", True)),
             "is_verified": bool(u.get("is_verified", True)),
             "verification_status": u.get("verification_status") or "verified",
         }

@@ -55,9 +55,8 @@ const renderTextWithMentions = (text) => {
 
 export default function ClassFeedPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "moderator" || user?.role === "admin";
-  const classLabel =
-    user?.filiere && user?.annee ? `${user.filiere} ${user.annee}` : "ENSAE";
+  const isAdmin = ["moderator", "admin", "class_admin"].includes(user?.role);
+  const classLabel = user?.class_name || (user?.filiere && user?.annee ? `${user.filiere} ${user.annee}` : "ENSAE");
 
   const [posts, setPosts] = useState([]);
   const [events, setEvents] = useState([]);
@@ -417,8 +416,9 @@ export default function ClassFeedPage() {
             <div className="space-y-4">
               {posts.map((p) => {
                 const km = KIND_META[p.kind] || KIND_META.post;
-                const isPostAdmin =
-                  p.author_role === "moderator" || p.author_role === "admin";
+                const isPostAdmin = ["moderator", "admin", "class_admin"].includes(
+                  p.author_role,
+                );
                 return (
                   <article
                     key={p.id}

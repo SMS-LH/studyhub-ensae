@@ -44,23 +44,15 @@ async def update_my_slots(body: SlotsIn, user: dict = Depends(get_current_user))
 @router.get("/tutors")
 async def list_tutors(
     subject: str = "",
-    filiere: str = "",
-    annee: int | None = None,
-    available_only: bool = False,
+    class_name: str = "",
     user: dict = Depends(get_current_user),
 ):
     flt: dict = {"is_tutor": True, "role": {"$ne": "admin"}}
     if subject:
         flt["tutor_subjects"] = subject
-    if filiere:
-        flt["filiere"] = filiere.strip().upper()
-    if annee is not None:
-        flt["annee"] = annee
-    if available_only:
-        flt["tutor_available_this_week"] = {"$ne": False}
+    if class_name:
+        flt["class_name"] = class_name
     tutors = await db.users.find(flt, {"_id": 0, "password_hash": 0}).to_list(200)
-    my_weaknesses = [w.lower() for w in (user.get("weaknesses") or [])]
-    my_annee = user.get("annee") or 1
     out = []
     for t in tutors:
         sessions = await db.tutoring_requests.find(
@@ -78,23 +70,17 @@ async def list_tutors(
         pu["review_count"] = len(ratings)
         pu["thanks_count"] = thanks_count
         pu["thanked_by_me"] = thanked_by_me
-
-        # Intelligent matching score based on student's weaknesses & senior level
+        # Matching score
         t_subjects = [s.lower() for s in (t.get("tutor_subjects") or [])]
-        t_skills = [s.get("name", "").lower() for s in (t.get("skills") or [])]
         matched = []
         for w in user.get("weaknesses") or []:
             wl = w.lower()
-            if any(wl in ts or ts in wl for ts in t_subjects + t_skills):
+            if any(wl in ts or ts in wl for ts in t_subjects):
                 matched.append(w)
         score = len(matched) * 35
         if subject and any(subject.lower() in ts for ts in t_subjects):
             score += 25
-        if (t.get("annee") or 0) > my_annee:
-            score += 15
-        if avg_r:
-            score += int(avg_r * 4)
-        score = min(100, score) if (matched or subject) else 0
+        score = min(100, score) if matched else 0
         pu["match_score"] = score
         pu["matched_weaknesses"] = matched
         out.append(pu)
@@ -348,16 +334,6 @@ async def send_message(
     }
     await db.tutoring_messages.insert_one(dict(msg))
     return msg
-
-
-@router.post("/availability")
-async def toggle_availability(user: dict = Depends(get_current_user)):
-    cur = bool(user.get("tutor_available_this_week", True))
-    nxt = not cur
-    await db.users.update_one(
-        {"id": user["id"]}, {"$set": {"tutor_available_this_week": nxt}}
-    )
-    return {"tutor_available_this_week": nxt}
 
 
 @router.post("/tutors/{tutor_id}/thank")
