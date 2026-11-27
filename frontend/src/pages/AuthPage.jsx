@@ -75,7 +75,9 @@ export default function AuthPage() {
       if (mode === "forgot") {
         await api.post("/auth/forgot-password", { email: form.email });
         setForgotSent(true);
-        toast.success("Si un compte existe avec cet email, un lien a été envoyé.");
+        toast.success(
+          "Si un compte existe avec cet email, un lien a été envoyé.",
+        );
         return;
       }
       if (mode === "reset") {
@@ -106,7 +108,9 @@ export default function AuthPage() {
         // Pending accounts are not logged in; show persistent confirmation card
         if (result?.user?.verification_status === "pending") {
           setPendingCreated(true);
-          toast.info("Compte créé — en attente de validation par un modérateur BDE.");
+          toast.info(
+            "Compte créé — en attente de validation par un modérateur BDE.",
+          );
           return;
         }
         // Auto-login for verified accounts (ENSAE email or invite code)
@@ -155,7 +159,7 @@ export default function AuthPage() {
             <Pillar
               icon={GraduationCap}
               title="Tutorat inter-niveaux"
-              text="Les promotions avancées (ISE2/3, AS2/3) accompagnent les plus jeunes."
+              text="Les promotions avancées accompagnent les plus jeunes."
             />
             <Pillar
               icon={Sparkles}
@@ -234,7 +238,10 @@ export default function AuthPage() {
                 <span>Compte en attente de validation</span>
               </div>
               <p className="text-sm text-slate-700">
-                Ton inscription pour <strong>{form.email}</strong> ({form.class_name}) a bien été enregistrée. Un modérateur BDE ou ton délégué de classe doit maintenant approuver ton compte avant que tu puisses te connecter.
+                Ton inscription pour <strong>{form.email}</strong> (
+                {form.class_name}) a bien été enregistrée. Un modérateur BDE ou
+                ton délégué de classe doit maintenant approuver ton compte avant
+                que tu puisses te connecter.
               </p>
               <Button
                 type="button"
@@ -256,7 +263,9 @@ export default function AuthPage() {
                 <span>Vérifie ta boîte mail</span>
               </div>
               <p className="text-sm text-slate-600">
-                Si un compte existe pour <strong>{form.email}</strong>, tu vas recevoir un lien valable 1 heure pour réinitialiser ton mot de passe. Pense à vérifier tes spams.
+                Si un compte existe pour <strong>{form.email}</strong>, tu vas
+                recevoir un lien valable 1 heure pour réinitialiser ton mot de
+                passe. Pense à vérifier tes spams.
               </p>
               <Button
                 type="button"
@@ -293,13 +302,21 @@ export default function AuthPage() {
                   </div>
                   <div>
                     <Label>Classe ENSAE *</Label>
-                    <Select value={form.class_name} onValueChange={set("class_name")}>
-                      <SelectTrigger data-testid="auth-class-select" className="mt-1.5 h-11">
+                    <Select
+                      value={form.class_name}
+                      onValueChange={set("class_name")}
+                    >
+                      <SelectTrigger
+                        data-testid="auth-class-select"
+                        className="mt-1.5 h-11"
+                      >
                         <SelectValue placeholder="Sélectionne ta classe" />
                       </SelectTrigger>
                       <SelectContent>
                         {ENSAE_CLASSES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -334,13 +351,17 @@ export default function AuthPage() {
                       className="mt-1.5 h-11 font-mono uppercase"
                     />
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Accès immédiat avec un email @ensae.fr / @ensae.sn ou le code de ta classe ; sinon ton compte sera validé par un modérateur BDE.
+                      Accès immédiat avec un email @ensae.fr / @ensae.sn ou le
+                      code de ta classe ; sinon ton compte sera validé par un
+                      modérateur BDE.
                     </p>
                   </div>
                 </>
               )}
 
-              {(mode === "login" || mode === "register" || mode === "forgot") && (
+              {(mode === "login" ||
+                mode === "register" ||
+                mode === "forgot") && (
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -356,11 +377,15 @@ export default function AuthPage() {
                 </div>
               )}
 
-              {(mode === "login" || mode === "register" || mode === "reset") && (
+              {(mode === "login" ||
+                mode === "register" ||
+                mode === "reset") && (
                 <div>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="pwd">
-                      {mode === "reset" ? "Nouveau mot de passe" : "Mot de passe"}
+                      {mode === "reset"
+                        ? "Nouveau mot de passe"
+                        : "Mot de passe"}
                     </Label>
                     {mode === "login" && (
                       <button
@@ -390,7 +415,11 @@ export default function AuthPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                      aria-label={
+                        showPassword
+                          ? "Masquer le mot de passe"
+                          : "Afficher le mot de passe"
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -422,18 +451,18 @@ export default function AuthPage() {
                 className="w-full h-11 rounded-full font-semibold"
               >
                 {loading && <Loader2 className="animate-spin mr-2" size={16} />}
-                {mode === "login"
-                  ? "Se connecter"
-                  : mode === "register"
-                    ? "Créer mon compte ENSAE"
-                    : mode === "forgot"
-                      ? "Envoyer le lien de réinitialisation"
-                      : (
-                        <>
-                          <KeyRound size={15} className="mr-2" />
-                          Enregistrer le nouveau mot de passe
-                        </>
-                      )}
+                {mode === "login" ? (
+                  "Se connecter"
+                ) : mode === "register" ? (
+                  "Créer mon compte ENSAE"
+                ) : mode === "forgot" ? (
+                  "Envoyer le lien de réinitialisation"
+                ) : (
+                  <>
+                    <KeyRound size={15} className="mr-2" />
+                    Enregistrer le nouveau mot de passe
+                  </>
+                )}
               </Button>
 
               {(mode === "forgot" || mode === "reset") && (
