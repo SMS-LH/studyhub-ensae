@@ -656,13 +656,7 @@ async def list_forum_posts(
     user: dict = Depends(get_current_user),
 ):
     flt: dict = {}
-    u_fil = (user.get("filiere") or "").strip().upper()
-    u_yr = user.get("annee")
-    if u_fil and user.get("role") != "admin":
-        flt["filiere"] = u_fil
-        if u_yr is not None:
-            flt["annee"] = u_yr
-    elif filiere:
+    if filiere:
         flt["filiere"] = filiere.strip().upper()
     if subject:
         flt["subject"] = subject
