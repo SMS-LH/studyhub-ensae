@@ -2,6 +2,9 @@ import { useState } from "react";
 import {
   ArrowLeft,
   BookOpen,
+  Clock,
+  Eye,
+  EyeOff,
   GraduationCap,
   KeyRound,
   Loader2,
@@ -49,6 +52,8 @@ export default function AuthPage() {
   const [mode, setMode] = useState(initialResetToken ? "reset" : "login");
   const [resetToken, setResetToken] = useState(initialResetToken);
   const [forgotSent, setForgotSent] = useState(false);
+  const [pendingCreated, setPendingCreated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [form, setForm] = useState({
     email: "",
@@ -93,14 +98,15 @@ export default function AuthPage() {
       if (demoCreds) await login(demoCreds[0], demoCreds[1]);
       else if (mode === "login") await login(form.email, form.password);
       else {
+        if (!form.class_name) {
+          toast.error("Sélectionne ta classe ENSAE avant de créer ton compte.");
+          return;
+        }
         const result = await register(form);
-        // Pending accounts are not logged in; show info message and redirect to login
+        // Pending accounts are not logged in; show persistent confirmation card
         if (result?.user?.verification_status === "pending") {
-          toast.info(
-            "Compte créé ! Ton inscription est en attente de validation par un modérateur BDE. Tu pourras te connecter dès qu'elle sera approuvée.",
-            { duration: 8000 },
-          );
-          setMode("login");
+          setPendingCreated(true);
+          toast.info("Compte créé — en attente de validation par un modérateur BDE.");
           return;
         }
         // Auto-login for verified accounts (ENSAE email or invite code)
@@ -129,7 +135,7 @@ export default function AuthPage() {
               StudyHub ENSAE
             </span>
             <span className="text-[11px] uppercase tracking-[0.2em] text-amber-300 font-semibold">
-              Filières ISE (1-5) & AS (1-3)
+              Filières ISEP, ISE & AS
             </span>
           </div>
         </div>
@@ -138,28 +144,28 @@ export default function AuthPage() {
             100 % étudiant · 100 % gratuit
           </div>
           <h1 className="text-5xl xl:text-6xl font-extrabold leading-[1.02]">
-            L'entraide ENSAE, de la 1re année à la 5e.
+            L'entraide ENSAE, de l'ISEP à l'ISE3 & AS3.
           </h1>
           <div className="mt-10 space-y-5">
             <Pillar
               icon={BookOpen}
               title="Bibliothèque & Annales ENSAE"
-              text="Fiches, scripts R/Python/Stata/SAS et annales validés par les tuteurs."
+              text="Fiches, scripts R/Python/Stata/SAS et annales partagées par promotion."
             />
             <Pillar
               icon={GraduationCap}
               title="Tutorat inter-niveaux"
-              text="Les ISE 4/5 et AS 3 accompagnent les promotions plus jeunes."
+              text="Les promotions avancées (ISE2/3, AS2/3) accompagnent les plus jeunes."
             />
             <Pillar
               icon={Sparkles}
               title="Assistant IA Stats & Éco"
-              text="Résumés, QCM, debugger de code R/Python et rétroplanning partiels."
+              text="Résumés, QCM, flashcards, debugger R/Python et planning de révisions."
             />
             <Pillar
               icon={Users}
-              title="Amphis virtuels & Projets TD"
-              text="Espaces publics par promo (ISE 1-5, AS 1-3) + recherche de binômes."
+              title="Espaces de classe & Projets TD"
+              text="Fils dédiés aux 10 classes ENSAE, groupes TD Kanban et binômes."
             />
           </div>
         </div>
@@ -177,7 +183,7 @@ export default function AuthPage() {
                 StudyHub ENSAE
               </span>
               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
-                ISE & AS
+                ISEP, ISE & AS
               </span>
             </div>
           </div>
@@ -209,7 +215,10 @@ export default function AuthPage() {
                 <button
                   key={m}
                   data-testid={t}
-                  onClick={() => setMode(m)}
+                  onClick={() => {
+                    setPendingCreated(false);
+                    setMode(m);
+                  }}
                   className={`py-2 rounded-full text-sm font-semibold transition-colors duration-200 ${mode === m ? "bg-white shadow text-primary" : "text-slate-500"}`}
                 >
                   {l}
@@ -218,7 +227,29 @@ export default function AuthPage() {
             </div>
           )}
 
-          {mode === "forgot" && forgotSent ? (
+          {mode === "register" && pendingCreated ? (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/80 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                <Clock size={18} />
+                <span>Compte en attente de validation</span>
+              </div>
+              <p className="text-sm text-slate-700">
+                Ton inscription pour <strong>{form.email}</strong> ({form.class_name}) a bien été enregistrée. Un modérateur BDE ou ton délégué de classe doit maintenant approuver ton compte avant que tu puisses te connecter.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPendingCreated(false);
+                  setMode("login");
+                }}
+                className="w-full h-10 rounded-full"
+              >
+                <ArrowLeft size={15} className="mr-2" />
+                Retour à la connexion
+              </Button>
+            </div>
+          ) : mode === "forgot" && forgotSent ? (
             <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 space-y-3">
               <div className="flex items-center gap-2 text-emerald-800 font-semibold">
                 <MailCheck size={18} />
@@ -261,7 +292,7 @@ export default function AuthPage() {
                     />
                   </div>
                   <div>
-                    <Label>Classe ENSAE</Label>
+                    <Label>Classe ENSAE *</Label>
                     <Select value={form.class_name} onValueChange={set("class_name")}>
                       <SelectTrigger data-testid="auth-class-select" className="mt-1.5 h-11">
                         <SelectValue placeholder="Sélectionne ta classe" />
@@ -302,6 +333,9 @@ export default function AuthPage() {
                       placeholder="Ex. ISE1ENSAE (donné par ton délégué)"
                       className="mt-1.5 h-11 font-mono uppercase"
                     />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Accès immédiat avec un email @ensae.fr / @ensae.sn ou le code de ta classe ; sinon ton compte sera validé par un modérateur BDE.
+                    </p>
                   </div>
                 </>
               )}
@@ -341,17 +375,27 @@ export default function AuthPage() {
                       </button>
                     )}
                   </div>
-                  <Input
-                    id="pwd"
-                    type="password"
-                    data-testid="auth-password-input"
-                    required
-                    minLength={6}
-                    value={form.password}
-                    onChange={set("password")}
-                    placeholder="6 caractères minimum"
-                    className="mt-1.5 h-11"
-                  />
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="pwd"
+                      type={showPassword ? "text" : "password"}
+                      data-testid="auth-password-input"
+                      required
+                      minLength={6}
+                      value={form.password}
+                      onChange={set("password")}
+                      placeholder="6 caractères minimum"
+                      className="h-11 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -360,7 +404,7 @@ export default function AuthPage() {
                   <Label htmlFor="confirm-pwd">Confirmer le mot de passe</Label>
                   <Input
                     id="confirm-pwd"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     minLength={6}
                     value={confirmPassword}
