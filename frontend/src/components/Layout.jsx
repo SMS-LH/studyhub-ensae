@@ -5,6 +5,7 @@ import {
   Home,
   LogOut,
   MessageSquare,
+  MessagesSquare,
   ShieldCheck,
   Sparkles,
   Users,
@@ -57,6 +58,13 @@ const NAV = [
     shortLabel: "Tutorat",
     icon: GraduationCap,
     testid: "nav-link-tutoring",
+  },
+  {
+    to: "/forum",
+    label: "Forum",
+    shortLabel: "Forum",
+    icon: MessagesSquare,
+    testid: "nav-link-forum",
   },
   {
     to: "/messages",
@@ -187,7 +195,7 @@ export default function Layout() {
             to={to}
             data-testid={`mobile-${testid}`}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-colors ${
+              `flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl text-[10px] font-semibold transition-colors ${
                 isActive ? "text-primary bg-blue-50" : "text-slate-500"
               }`
             }
